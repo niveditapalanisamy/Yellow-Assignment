@@ -1,0 +1,48 @@
+Extracted submission tested without Jira/Gemini environment variables.
+test_adf_roundtrip_preserves_newlines (tests.test_agent.AgentTests.test_adf_roundtrip_preserves_newlines) ... ok
+test_ambiguous_manifest_cannot_approve (tests.test_agent.AgentTests.test_ambiguous_manifest_cannot_approve) ... ok
+test_broken_link_is_reported (tests.test_agent.AgentTests.test_broken_link_is_reported) ... ok
+test_budget_exhaustion_cannot_approve (tests.test_agent.AgentTests.test_budget_exhaustion_cannot_approve) ... ok
+test_comments_past_first_page_are_retrieved (tests.test_agent.AgentTests.test_comments_past_first_page_are_retrieved) ... ok
+test_fabricated_citation_and_omitted_dependency_rejected (tests.test_agent.AgentTests.test_fabricated_citation_and_omitted_dependency_rejected) ... ok
+test_invalid_keys_and_labels_rejected (tests.test_agent.AgentTests.test_invalid_keys_and_labels_rejected) ... ok
+test_model_failure_produces_honest_partial_artifacts (tests.test_agent.AgentTests.test_model_failure_produces_honest_partial_artifacts) ... ok
+test_nested_dependency_must_be_inspected (tests.test_agent.AgentTests.test_nested_dependency_must_be_inspected) ... ok
+test_scope_guard_prevents_cross_project_and_label_reads (tests.test_agent.AgentTests.test_scope_guard_prevents_cross_project_and_label_reads) ... ok
+test_search_tool_results_are_valid_gemini_objects (tests.test_agent.AgentTests.test_search_tool_results_are_valid_gemini_objects) ... ok
+test_tool_loop_generates_report_trace_and_usage (tests.test_agent.AgentTests.test_tool_loop_generates_report_trace_and_usage) ... ok
+test_unknown_release_fails_before_model (tests.test_agent.AgentTests.test_unknown_release_fails_before_model) ... ok
+test_cross_origin_and_rebinding_requests_rejected (tests.test_api.APITests.test_cross_origin_and_rebinding_requests_rejected) ... ok
+test_dashboard_health_and_configuration_do_not_expose_credentials (tests.test_api.APITests.test_dashboard_health_and_configuration_do_not_expose_credentials) ... ok
+test_dry_run_endpoint (tests.test_api.APITests.test_dry_run_endpoint) ... ok
+test_invalid_requests (tests.test_api.APITests.test_invalid_requests) ... ok
+test_model_selects_bundle_before_evidence_is_in_context (tests.test_batched.BatchedTests.test_model_selects_bundle_before_evidence_is_in_context) ... ok
+test_partial_batch_submission_requires_correction (tests.test_batched.BatchedTests.test_partial_batch_submission_requires_correction) ... ok
+test_unknown_root_and_budget_cannot_approve (tests.test_batched.BatchedTests.test_unknown_root_and_budget_cannot_approve) ... ok
+test_all_pass_ready (tests.test_decision.DecisionTests.test_all_pass_ready) ... ok
+test_any_fail_blocks (tests.test_decision.DecisionTests.test_any_fail_blocks) ... ok
+test_empty_is_needs_review (tests.test_decision.DecisionTests.test_empty_is_needs_review) ... ok
+test_insufficient_without_fail_needs_review (tests.test_decision.DecisionTests.test_insufficient_without_fail_needs_review) ... ok
+test_unknown_status_rejected (tests.test_decision.DecisionTests.test_unknown_status_rejected) ... ok
+test_authenticated_external_host_and_origin (tests.test_hosting.HostingTests.test_authenticated_external_host_and_origin) ... ok
+test_every_evidence_and_action_route_requires_login (tests.test_hosting.HostingTests.test_every_evidence_and_action_route_requires_login) ... ok
+test_origin_and_host_cannot_be_supplied_by_untrusted_forwarded_headers (tests.test_hosting.HostingTests.test_origin_and_host_cannot_be_supplied_by_untrusted_forwarded_headers) ... ok
+test_original_report_is_available_with_empty_runtime_storage (tests.test_hosting.HostingTests.test_original_report_is_available_with_empty_runtime_storage) ... ok
+test_public_health_without_credentials (tests.test_hosting.HostingTests.test_public_health_without_credentials) ... ok
+test_public_startup_fails_without_strong_password_and_origin (tests.test_hosting.HostingTests.test_public_startup_fails_without_strong_password_and_origin) ... ok
+test_wrong_password_is_rejected (tests.test_hosting.HostingTests.test_wrong_password_is_rejected) ... ok
+test_dry_run_has_no_credentials_or_writes (tests.test_importer.ImportTests.test_dry_run_has_no_credentials_or_writes) ... ok
+test_duplicate_and_dangling_ids_are_rejected (tests.test_importer.ImportTests.test_duplicate_and_dangling_ids_are_rejected) ... ok
+test_full_dataset_exact_fidelity_and_repeatability (tests.test_importer.ImportTests.test_full_dataset_exact_fidelity_and_repeatability) ... ok
+test_label_mismatch_rejected_before_writes (tests.test_importer.ImportTests.test_label_mismatch_rejected_before_writes) ... ok
+test_incomplete_model_response_rejected (tests.test_model.ModelTests.test_incomplete_model_response_rejected) ... ok
+test_tool_response_signatures_and_usage_preserved (tests.test_model.ModelTests.test_tool_response_signatures_and_usage_preserved) ... ok
+test_absolute_path_not_accepted (tests.test_transport.TransportTests.test_absolute_path_not_accepted) ... ok
+test_deadline_prevents_network_calls (tests.test_transport.TransportTests.test_deadline_prevents_network_calls) ... ok
+test_rate_limit_reads_retry_with_bound (tests.test_transport.TransportTests.test_rate_limit_reads_retry_with_bound) ... ok
+test_writes_are_not_retried_after_network_failure (tests.test_transport.TransportTests.test_writes_are_not_retried_after_network_failure) ... ok
+
+----------------------------------------------------------------------
+Ran 42 tests in 6.843s
+
+OK

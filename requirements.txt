@@ -1,0 +1,2 @@
+# Runtime dependencies: none. Python 3.12+ standard library only.
+# Run the application with: python app.py

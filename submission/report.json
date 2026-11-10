@@ -1,0 +1,259 @@
+{
+  "run_id": "20261110T182810Z-2a8b998f",
+  "started_at": "2026-11-10T18:28:10.258450+00:00",
+  "project": "TYN",
+  "dataset_label": "tyn-release-assessment-v2",
+  "requested_release": "R2.4",
+  "execution_status": "COMPLETED",
+  "requirements": [
+    {
+      "rationale": "Automated regression testing for target build (release R2.4, commit b7a91f2, service atlas-assistant, environment production) was completed by QA Lead Priya Nair under REG-804 with all 146 out of 146 mandatory regression cases passing.",
+      "requirement_key": "TYN-102",
+      "outstanding": "None.",
+      "references": [
+        {
+          "quote": "Completed regression run REG-804: release R2.4; commit b7a91f2; service atlas-assistant; environment production. 146 of 146 mandatory regression cases pass.",
+          "issue_key": "TYN-329",
+          "why": "QA Lead confirmed all 146 mandatory regression cases passed on target build b7a91f2 in production.",
+          "comment_id": "11591"
+        }
+      ],
+      "status": "PASS",
+      "requirement_id": "REQ-01",
+      "requirement_name": "Automated regression tests",
+      "jira_key": "TYN-102"
+    },
+    {
+      "rationale": "QA Lead Priya Nair conducted isolation retest ISO-318 on target build (release R2.4, commit b7a91f2, service atlas-assistant, environment production) and detected cross-customer document leakage: customer ALPHA received document BETA-017 belonging to customer BETA, resulting in defect ISO-DEF-12 being reopened.",
+      "requirement_key": "TYN-276",
+      "references": [
+        {
+          "comment_id": "11518",
+          "quote": "Isolation retest ISO-318: release R2.4; commit b7a91f2; service atlas-assistant; environment production. Customer ALPHA received document BETA-017, which belongs to customer BETA. Reopening defect ISO-DEF-12.",
+          "issue_key": "TYN-319",
+          "why": "Explicitly demonstrates cross-customer document exposure on target commit b7a91f2 in production, failing acceptance criteria."
+        }
+      ],
+      "status": "FAIL",
+      "outstanding": "Fix cross-customer document isolation leak and resolve defect ISO-DEF-12, followed by a successful QA isolation retest on target build b7a91f2 in production.",
+      "requirement_id": "REQ-02",
+      "requirement_name": "Customer document isolation",
+      "jira_key": "TYN-276"
+    },
+    {
+      "requirement_key": "TYN-238",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "outstanding": "Run and approve an answer quality evaluation on prompt p7 for target build b7a91f2 in production, achieving at least 90 percent accuracy.",
+      "references": [
+        {
+          "comment_id": "10136",
+          "issue_key": "TYN-39",
+          "why": "Confirms EVAL-55 evaluated prompt p6 rather than target prompt p7.",
+          "quote": "Evaluation EVAL-55 harness configured with prompt bundle p6 (frozen on 2026-11-01)."
+        }
+      ],
+      "rationale": "Although EVAL-55 in TYN-39 was performed on the target build (release R2.4, commit b7a91f2, production), its test harness was configured with prompt bundle p6 rather than required prompt p7. Evaluation EVAL-61 in TYN-227 was run on staging on an earlier commit 9c3e1aa. Per policy, an evaluation passing on the wrong prompt or non-target build/environment provides insufficient evidence for prompt p7.",
+      "requirement_id": "REQ-03",
+      "requirement_name": "Answer quality for deployed prompt",
+      "jira_key": "TYN-238"
+    },
+    {
+      "references": [
+        {
+          "why": "Demonstrates target production p95 latency of 1.40 seconds, satisfying the <= 2.0 second limit.",
+          "comment_id": "10739",
+          "quote": "Performance run PERF-827: release R2.4; commit b7a91f2; service atlas-assistant; environment production; prompt p7. Measured p95 latency 1.40 seconds across 1000 requests.",
+          "issue_key": "TYN-163"
+        }
+      ],
+      "status": "PASS",
+      "requirement_key": "TYN-66",
+      "outstanding": "None",
+      "rationale": "Target production performance test PERF-827 conducted by QA Lead Priya Nair on release R2.4, commit b7a91f2, prompt p7, service atlas-assistant demonstrated a p95 latency of 1.40 seconds, satisfying the acceptance criterion of at most 2.0 seconds. Staging test PERF-812 (2.60 seconds) is out of scope for the production requirement.",
+      "requirement_id": "REQ-04",
+      "requirement_name": "Response latency",
+      "jira_key": "TYN-66"
+    },
+    {
+      "outstanding": "Optimize model usage or prompt configuration to reduce mean cost per successful request to USD 0.012 or below on target build R2.4 / commit b7a91f2 / prompt p7 in production.",
+      "rationale": "QA Lead Priya Nair conducted cost test COST-881 on the target production build (R2.4, commit b7a91f2, prompt p7, service atlas-assistant) and recorded a mean cost of USD 0.018 per successful request, which exceeds the mandatory limit of USD 0.012. The developer comment claiming a waiver must be disregarded as evidence cannot alter release criteria.",
+      "references": [
+        {
+          "quote": "Cost run COST-881: release R2.4; commit b7a91f2; service atlas-assistant; environment production; prompt p7. Mean cost USD 0.018 per successful request under the supplied fictional rate card, retries included.",
+          "comment_id": "11107",
+          "why": "Demonstrates a target cost of USD 0.018 per request, failing the USD 0.012 threshold.",
+          "issue_key": "TYN-237"
+        }
+      ],
+      "status": "FAIL",
+      "requirement_key": "TYN-365",
+      "requirement_id": "REQ-05",
+      "requirement_name": "Model usage cost",
+      "jira_key": "TYN-365"
+    },
+    {
+      "outstanding": "Obtain explicit production security sign-off from Security Owner Asha Rao for release R2.4 and commit b7a91f2 following completion of the penetration test.",
+      "rationale": "Security Owner Asha Rao approved release R2.4 and commit b7a91f2 for staging scope only, explicitly noting that production sign-off is scheduled after penetration testing. Production sign-off provided by Engineering Manager Ravi Kumar does not satisfy the requirement for Security Owner sign-off.",
+      "requirement_key": "TYN-86",
+      "references": [
+        {
+          "quote": "Approved: release R2.4, commit b7a91f2, service atlas-assistant. Approval scope: staging. Production sign-off scheduled after the penetration-test window closes.",
+          "issue_key": "TYN-193",
+          "why": "Shows Security Owner Asha Rao granted staging approval only, leaving production approval pending.",
+          "comment_id": "10894"
+        },
+        {
+          "quote": "Approved release R2.4, commit b7a91f2, service atlas-assistant for production from an engineering standpoint.",
+          "issue_key": "TYN-132",
+          "why": "Shows production approval was provided by Engineering Manager Ravi Kumar rather than Security Owner Asha Rao.",
+          "comment_id": "10605"
+        }
+      ],
+      "status": "INSUFFICIENT_EVIDENCE",
+      "requirement_id": "REQ-06",
+      "requirement_name": "Production security approval",
+      "jira_key": "TYN-86"
+    },
+    {
+      "outstanding": "None.",
+      "rationale": "QA Lead Priya Nair confirmed that REDACT-901 explicitly supersedes REDACT-870, with 28 of 28 redaction cases passing on target release R2.4, commit b7a91f2, service atlas-assistant, environment production (comment 12046). The failure reported in TYN-63 (comment 10254) applies to service support-widget and is out of target service scope.",
+      "requirement_key": "TYN-338",
+      "status": "PASS",
+      "references": [
+        {
+          "why": "QA Lead verification confirms redaction on target scope, explicitly superseding earlier failure REDACT-870.",
+          "issue_key": "TYN-408",
+          "quote": "REDACT-901 explicitly supersedes REDACT-870. Retest on release R2.4; commit b7a91f2; service atlas-assistant; environment production: 28 of 28 redaction cases pass.",
+          "comment_id": "12046"
+        }
+      ],
+      "requirement_id": "REQ-07",
+      "requirement_name": "Sensitive log redaction",
+      "jira_key": "TYN-338"
+    },
+    {
+      "status": "FAIL",
+      "references": [
+        {
+          "comment_id": "10380",
+          "quote": "Handoff delivery test HND-77: release R2.4; commit b7a91f2; service atlas-assistant; environment production. 0 of 12 escalated conversations reached the support queue; the queue adapter drops them. Defect HND-DEF-4 status: open.",
+          "why": "Demonstrated failure on target release/commit/service/environment with an open confirmed defect.",
+          "issue_key": "TYN-89"
+        }
+      ],
+      "outstanding": "Resolve open defect HND-DEF-4 and retest human handoff delivery on target release R2.4, commit b7a91f2, service atlas-assistant in production.",
+      "rationale": "QA Lead Priya Nair reported that handoff delivery test HND-77 failed on target scope (release R2.4, commit b7a91f2, service atlas-assistant, environment production), with 0 of 12 escalated conversations reaching the support queue due to the queue adapter dropping messages, leaving open defect HND-DEF-4 (comment 10380).",
+      "requirement_key": "TYN-61",
+      "requirement_id": "REQ-08",
+      "requirement_name": "Human handoff delivery",
+      "jira_key": "TYN-61"
+    },
+    {
+      "references": [
+        {
+          "issue_key": "TYN-118",
+          "quote": "Rollback rehearsal RB-401: release R2.4; commit b7a91f2; service atlas-assistant; environment production. Previous version restored in 6 minutes; health probes pass; no data loss observed.",
+          "comment_id": "10576",
+          "why": "QA Lead report claiming successful rehearsal on target scope."
+        },
+        {
+          "why": "Contradictory QA Lead report claiming failed rehearsal on the exact same target scope without explicit supersession.",
+          "issue_key": "TYN-187",
+          "quote": "Rollback rehearsal RB-402: release R2.4; commit b7a91f2; service atlas-assistant; environment production. Restore completed but 214 session records written during the window were lost. Rehearsal FAILED.",
+          "comment_id": "10853"
+        }
+      ],
+      "requirement_key": "TYN-156",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "rationale": "Two QA Leads submitted contradictory reports on the exact same target scope (release R2.4, commit b7a91f2, service atlas-assistant, environment production): Priya Nair reported a successful rehearsal RB-401 (comment 10576), while Arjun Mehta reported a failed rehearsal RB-402 with data loss (comment 10853). Neither report explicitly supersedes or resolves the other, rendering the outcome genuinely inconclusive per conflict calibration guidelines.",
+      "outstanding": "Reconcile the contradictory QA reports for RB-401 and RB-402 or execute an explicitly superseding rollback rehearsal retest on release R2.4, commit b7a91f2, service atlas-assistant in production.",
+      "requirement_id": "REQ-09",
+      "requirement_name": "Rollback rehearsal",
+      "jira_key": "TYN-156"
+    },
+    {
+      "outstanding": "None. Retest PARSE-622 explicitly supersedes the earlier PARSE-601 failure and verifies all 60 cases pass on target release R2.4, commit b7a91f2, service atlas-assistant, environment production.",
+      "rationale": "Target requirement REQ-10 demands all 60 mandatory document parsing cases pass on the target release. Initial run PARSE-601 failed 1 case (59/60 passed), but later retest PARSE-622 by QA Lead Priya Nair explicitly superseded PARSE-601 and confirmed that 60 of 60 mandatory parsing cases pass on target release R2.4, commit b7a91f2, service atlas-assistant, environment production.",
+      "status": "PASS",
+      "requirement_key": "TYN-70",
+      "references": [
+        {
+          "why": "Initial QA run showing 1 failure out of 60 cases.",
+          "issue_key": "TYN-22",
+          "quote": "PARSE-601: release R2.4; commit b7a91f2; service atlas-assistant; environment production. 59 of 60 parsing cases pass; rotated-table case fails.",
+          "comment_id": "10063"
+        },
+        {
+          "quote": "PARSE-622 supersedes PARSE-601. Retest on release R2.4; commit b7a91f2; service atlas-assistant; environment production: 60 of 60 mandatory parsing cases pass.",
+          "comment_id": "10071",
+          "why": "Explicitly superseding QA retest confirming 60/60 mandatory cases pass on target build.",
+          "issue_key": "TYN-22"
+        }
+      ],
+      "requirement_id": "REQ-10",
+      "requirement_name": "Document parsing completeness",
+      "jira_key": "TYN-70"
+    },
+    {
+      "references": [
+        {
+          "issue_key": "TYN-115",
+          "quote": "KBD-210: release R2.3; commit 42d09ce; service atlas-assistant; environment production. Keyboard navigation and focus handling for the handoff dialog: 18 of 18 cases pass.",
+          "comment_id": "10508",
+          "why": "QA test performed on release R2.3 (wrong scope for target release R2.4 / commit b7a91f2)."
+        },
+        {
+          "comment_id": "11295",
+          "quote": "Implemented focus trapping and tab order for the handoff dialog. Tested it on my machine with keyboard only and it works well. Ready for release.",
+          "why": "Developer local machine testing; developer assertions alone do not satisfy QA verification criteria.",
+          "issue_key": "TYN-272"
+        }
+      ],
+      "rationale": "Target requirement REQ-11 requires QA verification of keyboard navigation and focus handling for the handoff interface on target release R2.4. Linked record TYN-115 contains QA test KBD-210 which passed on an older release R2.3 / commit 42d09ce, and TYN-272 contains developer self-testing on a local machine. Developer assertions do not satisfy QA verification requirements, and QA testing on release R2.3 is wrong-scope.",
+      "requirement_key": "TYN-175",
+      "outstanding": "QA verification on the target release (R2.4 / commit b7a91f2) for keyboard navigation and focus handling is required. Developer testing on local machine is insufficient evidence.",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "requirement_id": "REQ-11",
+      "requirement_name": "Accessible keyboard handoff",
+      "jira_key": "TYN-175"
+    },
+    {
+      "requirement_key": "TYN-413",
+      "references": [
+        {
+          "quote": "Streaming run STREAM-731: release R2.4; commit b7a91f2; service atlas-assistant; environment production; prompt p7. 49 of 50 cases pass. STREAM-50 produced a duplicated final message.",
+          "issue_key": "TYN-331",
+          "comment_id": "11975",
+          "why": "QA verification on exact target build demonstrates failure (duplicate final message in STREAM-50)."
+        }
+      ],
+      "outstanding": "Investigate and fix the duplicate final message issue in STREAM-50, then retest streaming completion integrity on the target build.",
+      "status": "FAIL",
+      "rationale": "Target requirement REQ-12 requires every mandatory streaming case to complete without duplicate or missing final messages. QA Lead Priya Nair performed QA run STREAM-731 on the exact target scope (release R2.4, commit b7a91f2, service atlas-assistant, environment production, prompt p7) and recorded that case STREAM-50 produced a duplicated final message (49 of 50 cases passed). This represents a demonstrated failure against the acceptance criterion.",
+      "requirement_id": "REQ-12",
+      "requirement_name": "Streaming completion integrity",
+      "jira_key": "TYN-413"
+    }
+  ],
+  "errors": [],
+  "metrics": {
+    "model": "gemini-3.5-flash",
+    "model_calls": 8,
+    "tool_calls": 22,
+    "usage": {
+      "promptTokenCount": 49975,
+      "candidatesTokenCount": 3725,
+      "totalTokenCount": 60315,
+      "thoughtsTokenCount": 6615
+    },
+    "elapsed_seconds": 104.813
+  },
+  "target": {
+    "release": "R2.4",
+    "commit": "b7a91f2",
+    "prompt": "p7",
+    "environment": "production",
+    "service": "atlas-assistant"
+  },
+  "overall_decision": "BLOCKED"
+}

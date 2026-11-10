@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: yellow-release-evidence
+    runtime: python
+    plan: free
+    buildCommand: python -m unittest discover -v
+    startCommand: python app.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.2
+      - key: HOST
+        value: 0.0.0.0
+      - key: APP_USERNAME
+        value: reviewer
+      - key: APP_PASSWORD
+        generateValue: true
+      - key: REPORT_DIR
+        value: /tmp/jira-release-reports
+      - key: JIRA_BASE_URL
+        sync: false
+      - key: JIRA_EMAIL
+        sync: false
+      - key: JIRA_API_TOKEN
+        sync: false
+      - key: JIRA_PROJECT_KEY
+        value: TYN
+      - key: JIRA_DATASET_LABEL
+        value: tyn-release-assessment-v2
+      - key: JIRA_ISSUE_TYPE
+        value: Task
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: GEMINI_MIN_INTERVAL_SECONDS
+        value: "5"
