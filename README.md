@@ -76,7 +76,7 @@ python app.py
 
 Open **http://127.0.0.1:8000**. Enter the project, dataset label and release. Validate/import the source records, run an investigation, inspect decisions and download the Markdown report, JSON and trace. Operations run in background threads; a state endpoint reports progress. The server binds to loopback, accepts same-origin requests, and never exposes configured secrets. It is a local development application, not a hosted multi-user service. Both Windows launchers start this same application.
 
-For hosted access, [Render deployment instructions](docs/RENDER.md) and `render.yaml` configure the external host/port, mandatory password protection and public health checks. The committed actual report remains available after a fresh deployment; newly generated report files on the free plan are ephemeral. No paid hosting resources are configured.
+For hosted access, [Render deployment instructions](docs/RENDER.md) and `render.yaml` configure the external host/port and public access to reports, Jira imports and live assessments. There is no username/password prompt. Credentials remain server-side. The committed actual report remains available after a fresh deployment; newly generated report files on the free plan are ephemeral. No paid hosting resources are configured.
 
 | Endpoint | Purpose |
 |---|---|

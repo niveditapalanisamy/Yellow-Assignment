@@ -11,10 +11,6 @@ services:
         value: 3.12.2
       - key: HOST
         value: 0.0.0.0
-      - key: APP_USERNAME
-        value: reviewer
-      - key: APP_PASSWORD
-        generateValue: true
       - key: REPORT_DIR
         value: /tmp/jira-release-reports
       - key: JIRA_BASE_URL

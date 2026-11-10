@@ -22,7 +22,7 @@ Target: service `atlas-assistant`, commit `b7a91f2`, environment `production`, p
 | Preserved directed relationships | 76 |
 | Read-only live fidelity audit | Passed, no mismatches, 34.969 seconds |
 | Live importer rerun | Zero issues/comments/links added; zero descriptions changed, 50.578 seconds |
-| Automated tests | 42 passed, including hosted authentication/origin checks; no Jira/model credentials or runtime packages required |
+| Automated tests | 42 passed, including public hosted access/origin checks; no Jira/model credentials or runtime packages required |
 | Decision regression check | All 12 matched independently reviewed expectations |
 
 - `report.md`: final human-readable report, exact Jira comment links, reasoning, follow-up and metrics.

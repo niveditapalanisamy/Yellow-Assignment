@@ -1,8 +1,6 @@
-"""Dashboard/API with loopback defaults and authenticated Render hosting."""
+"""Public dashboard/API with loopback defaults and trusted-origin Render hosting."""
 import argparse
-import base64
 from datetime import datetime, timezone
-import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -96,26 +94,9 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get('Origin')
         return host in expected and (not origin or origin in origins)
 
-    def authorized(self):
-        if self.server.password is None:
-            return True
-        try:
-            scheme, encoded = self.headers.get('Authorization', '').split(' ', 1)
-            if scheme.lower() != 'basic':
-                return False
-            decoded = base64.b64decode(encoded, validate=True).decode('utf-8')
-            username, password = decoded.split(':', 1)
-            return hmac.compare_digest(username.encode(), self.server.username.encode()) and hmac.compare_digest(password.encode(), self.server.password.encode())
-        except (ValueError, UnicodeError):
-            return False
-
     def guard(self):
         if not self.local_request():
             self.send(403, {'error': 'Untrusted host or origin'})
-            return False
-        if not self.authorized():
-            self.send(401, {'error': 'Authentication required'}, headers={
-                'WWW-Authenticate': 'Basic realm="Release Evidence", charset="UTF-8"'})
             return False
         return True
 
@@ -185,21 +166,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {'error': str(exc)})
 
 
-def create_server(port=8000, host='127.0.0.1', public_url=None, username='reviewer', password=None, report_dir=None):
+def create_server(port=8000, host='127.0.0.1', public_url=None, report_dir=None):
     if public_url:
         parsed = urlsplit(public_url)
         if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ('', '/'):
             raise ValueError('PUBLIC_BASE_URL must be an HTTPS origin')
         public_url = public_url.rstrip('/')
     if host not in ('127.0.0.1', 'localhost', '::1') or public_url:
-        if not password or len(password) < 20:
-            raise ValueError('Public hosting requires APP_PASSWORD with at least 20 characters')
         if not public_url:
             raise ValueError('Public hosting requires PUBLIC_BASE_URL or RENDER_EXTERNAL_URL')
-    if not username or ':' in username:
-        raise ValueError('Invalid APP_USERNAME')
     server = ThreadingHTTPServer((host, port), Handler)
-    server.public_url, server.username, server.password = public_url, username, password
+    server.public_url = public_url
     server.application = Application(report_dir)
     return server
 
@@ -210,8 +187,7 @@ def main():
     parser.add_argument('--host', default=os.getenv('HOST', '0.0.0.0' if os.getenv('RENDER') == 'true' else '127.0.0.1'))
     args = parser.parse_args()
     server = create_server(args.port, args.host,
-        public_url=os.getenv('PUBLIC_BASE_URL') or os.getenv('RENDER_EXTERNAL_URL'),
-        username=os.getenv('APP_USERNAME', 'reviewer'), password=os.getenv('APP_PASSWORD') or None)
+        public_url=os.getenv('PUBLIC_BASE_URL') or os.getenv('RENDER_EXTERNAL_URL'))
     print(f'Release Evidence Agent listening on {args.host}:{server.server_port}', flush=True)
     try:
         server.serve_forever()

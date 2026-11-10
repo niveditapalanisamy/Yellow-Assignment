@@ -24,13 +24,13 @@ test_any_fail_blocks (tests.test_decision.DecisionTests.test_any_fail_blocks) ..
 test_empty_is_needs_review (tests.test_decision.DecisionTests.test_empty_is_needs_review) ... ok
 test_insufficient_without_fail_needs_review (tests.test_decision.DecisionTests.test_insufficient_without_fail_needs_review) ... ok
 test_unknown_status_rejected (tests.test_decision.DecisionTests.test_unknown_status_rejected) ... ok
-test_authenticated_external_host_and_origin (tests.test_hosting.HostingTests.test_authenticated_external_host_and_origin) ... ok
-test_every_evidence_and_action_route_requires_login (tests.test_hosting.HostingTests.test_every_evidence_and_action_route_requires_login) ... ok
-test_origin_and_host_cannot_be_supplied_by_untrusted_forwarded_headers (tests.test_hosting.HostingTests.test_origin_and_host_cannot_be_supplied_by_untrusted_forwarded_headers) ... ok
+test_dashboard_and_reports_never_challenge_for_login (tests.test_hosting.HostingTests.test_dashboard_and_reports_never_challenge_for_login) ... ok
+test_host_and_origin_checks_still_apply (tests.test_hosting.HostingTests.test_host_and_origin_checks_still_apply) ... ok
+test_live_assessment_and_import_can_start_without_credentials (tests.test_hosting.HostingTests.test_live_assessment_and_import_can_start_without_credentials) ... ok
 test_original_report_is_available_with_empty_runtime_storage (tests.test_hosting.HostingTests.test_original_report_is_available_with_empty_runtime_storage) ... ok
+test_public_external_origin_can_validate_dataset (tests.test_hosting.HostingTests.test_public_external_origin_can_validate_dataset) ... ok
 test_public_health_without_credentials (tests.test_hosting.HostingTests.test_public_health_without_credentials) ... ok
-test_public_startup_fails_without_strong_password_and_origin (tests.test_hosting.HostingTests.test_public_startup_fails_without_strong_password_and_origin) ... ok
-test_wrong_password_is_rejected (tests.test_hosting.HostingTests.test_wrong_password_is_rejected) ... ok
+test_public_startup_needs_https_origin_but_not_password (tests.test_hosting.HostingTests.test_public_startup_needs_https_origin_but_not_password) ... ok
 test_dry_run_has_no_credentials_or_writes (tests.test_importer.ImportTests.test_dry_run_has_no_credentials_or_writes) ... ok
 test_duplicate_and_dangling_ids_are_rejected (tests.test_importer.ImportTests.test_duplicate_and_dangling_ids_are_rejected) ... ok
 test_full_dataset_exact_fidelity_and_repeatability (tests.test_importer.ImportTests.test_full_dataset_exact_fidelity_and_repeatability) ... ok
@@ -43,6 +43,6 @@ test_rate_limit_reads_retry_with_bound (tests.test_transport.TransportTests.test
 test_writes_are_not_retried_after_network_failure (tests.test_transport.TransportTests.test_writes_are_not_retried_after_network_failure) ... ok
 
 ----------------------------------------------------------------------
-Ran 42 tests in 6.843s
+Ran 42 tests in 6.872s
 
 OK
