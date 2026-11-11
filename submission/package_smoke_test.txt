@@ -1,4 +1,4 @@
-Extracted submission tested without Jira/Gemini environment variables.
+Extracted submission tested without Jira/Groq environment variables.
 test_adf_roundtrip_preserves_newlines (tests.test_agent.AgentTests.test_adf_roundtrip_preserves_newlines) ... ok
 test_ambiguous_manifest_cannot_approve (tests.test_agent.AgentTests.test_ambiguous_manifest_cannot_approve) ... ok
 test_broken_link_is_reported (tests.test_agent.AgentTests.test_broken_link_is_reported) ... ok
@@ -9,7 +9,7 @@ test_invalid_keys_and_labels_rejected (tests.test_agent.AgentTests.test_invalid_
 test_model_failure_produces_honest_partial_artifacts (tests.test_agent.AgentTests.test_model_failure_produces_honest_partial_artifacts) ... ok
 test_nested_dependency_must_be_inspected (tests.test_agent.AgentTests.test_nested_dependency_must_be_inspected) ... ok
 test_scope_guard_prevents_cross_project_and_label_reads (tests.test_agent.AgentTests.test_scope_guard_prevents_cross_project_and_label_reads) ... ok
-test_search_tool_results_are_valid_gemini_objects (tests.test_agent.AgentTests.test_search_tool_results_are_valid_gemini_objects) ... ok
+test_search_tool_results_use_object_envelopes (tests.test_agent.AgentTests.test_search_tool_results_use_object_envelopes) ... ok
 test_tool_loop_generates_report_trace_and_usage (tests.test_agent.AgentTests.test_tool_loop_generates_report_trace_and_usage) ... ok
 test_unknown_release_fails_before_model (tests.test_agent.AgentTests.test_unknown_release_fails_before_model) ... ok
 test_cross_origin_and_rebinding_requests_rejected (tests.test_api.APITests.test_cross_origin_and_rebinding_requests_rejected) ... ok
@@ -36,13 +36,16 @@ test_duplicate_and_dangling_ids_are_rejected (tests.test_importer.ImportTests.te
 test_full_dataset_exact_fidelity_and_repeatability (tests.test_importer.ImportTests.test_full_dataset_exact_fidelity_and_repeatability) ... ok
 test_label_mismatch_rejected_before_writes (tests.test_importer.ImportTests.test_label_mismatch_rejected_before_writes) ... ok
 test_incomplete_model_response_rejected (tests.test_model.ModelTests.test_incomplete_model_response_rejected) ... ok
-test_tool_response_signatures_and_usage_preserved (tests.test_model.ModelTests.test_tool_response_signatures_and_usage_preserved) ... ok
+test_malformed_tool_arguments_rejected (tests.test_model.ModelTests.test_malformed_tool_arguments_rejected) ... ok
+test_missing_key_rejected (tests.test_model.ModelTests.test_missing_key_rejected) ... ok
+test_tool_calls_schema_auth_and_usage (tests.test_model.ModelTests.test_tool_calls_schema_auth_and_usage) ... ok
+test_tool_results_round_trip_with_call_ids (tests.test_model.ModelTests.test_tool_results_round_trip_with_call_ids) ... ok
 test_absolute_path_not_accepted (tests.test_transport.TransportTests.test_absolute_path_not_accepted) ... ok
 test_deadline_prevents_network_calls (tests.test_transport.TransportTests.test_deadline_prevents_network_calls) ... ok
 test_rate_limit_reads_retry_with_bound (tests.test_transport.TransportTests.test_rate_limit_reads_retry_with_bound) ... ok
 test_writes_are_not_retried_after_network_failure (tests.test_transport.TransportTests.test_writes_are_not_retried_after_network_failure) ... ok
 
 ----------------------------------------------------------------------
-Ran 42 tests in 6.872s
+Ran 45 tests in 6.652s
 
 OK

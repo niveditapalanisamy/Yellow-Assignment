@@ -24,17 +24,20 @@ class BatchedTests(unittest.TestCase):
         dataset.write_text(json.dumps(data), encoding='utf-8')
         self.jira = client()
         with contextlib.redirect_stdout(io.StringIO()):
-            run(dataset, client=self.jira, summary_path=self.path/'import.json')
+            imported = run(dataset, client=self.jira, summary_path=self.path/'import.json')
+        self.keys = imported['mapping']
 
     def decisions(self):
-        return [{'requirement_key': key, 'status': 'PASS',
+        evidence_key = self.keys['REC-1']
+        comment = next(c for c in self.jira.get_comments(evidence_key) if 'All 10 tests pass' in c['body'])
+        return [{'requirement_key': self.keys[sid], 'status': 'PASS',
             'rationale': 'QA confirms every mandatory test passes on the matching production target.',
-            'outstanding': 'None.', 'references': [{'issue_key': 'TYN-3', 'comment_id': '10003',
+            'outstanding': 'None.', 'references': [{'issue_key': evidence_key, 'comment_id': comment['id'],
                 'quote': 'All 10 tests pass on TEST-1 abc1234 synthetic production.', 'why': 'QA evidence matches the target.'}]}
-            for key in ('TYN-2', 'TYN-4', 'TYN-5')]
+            for sid in ('REQ-01', 'REQ-02', 'REQ-03')]
 
     def test_model_selects_bundle_before_evidence_is_in_context(self):
-        model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': ['TYN-2', 'TYN-4', 'TYN-5']}),
+        model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': [self.keys['REQ-01'], self.keys['REQ-02'], self.keys['REQ-03']]}),
             ('submit_decisions', {'decisions': self.decisions()})])
         result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path)
         self.assertEqual(result['execution_status'], 'COMPLETED')
@@ -45,7 +48,7 @@ class BatchedTests(unittest.TestCase):
         self.assertIn('All 10 tests pass', json.dumps(model.seen[1]))
 
     def test_partial_batch_submission_requires_correction(self):
-        model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': ['TYN-2', 'TYN-4', 'TYN-5']}),
+        model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': [self.keys['REQ-01'], self.keys['REQ-02'], self.keys['REQ-03']]}),
             ('submit_decisions', {'decisions': self.decisions()[:2]}),
             ('submit_decisions', {'decisions': self.decisions()})])
         result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path)
