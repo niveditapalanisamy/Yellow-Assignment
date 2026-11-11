@@ -103,7 +103,7 @@ class AgentTests(unittest.TestCase):
             JiraClient('TYN', 'x" OR project=OTHER', transport=MemoryJira())
 
     def test_adf_roundtrip_preserves_newlines(self):
-        text = 'Actor and role\n\nExact text with symbols: ≥ p95.'
+        text = 'Actor and role\n\nExact text with symbols: â‰¥ p95.'
         self.assertEqual(adf_to_text(to_adf(text)).strip(), text)
 
     def test_nested_dependency_must_be_inspected(self):
@@ -148,7 +148,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(result['execution_status'], 'FAILED')
         self.assertEqual(result['overall_decision'], 'NEEDS_REVIEW')
 
-    def test_search_tool_results_are_valid_gemini_objects(self):
+    def test_search_tool_results_use_object_envelopes(self):
         model = ScriptedModel([('get_record', {'issue_key': 'TYN-2'}),
             ('get_record', {'issue_key': 'TYN-3'}), ('search_issues', {'query': 'regression'}),
             ('submit_decision', self.decision())])

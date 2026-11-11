@@ -20,8 +20,8 @@ JIRA_EMAIL = os.getenv('JIRA_EMAIL', '')
 JIRA_API_TOKEN = os.getenv('JIRA_API_TOKEN', '')
 JIRA_PROJECT_KEY = os.getenv('JIRA_PROJECT_KEY', 'TYN').upper()
 JIRA_DATASET_LABEL = os.getenv('JIRA_DATASET_LABEL', 'tyn-release-assessment-v2')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'openai/gpt-oss-120b')
 REPORT_DIR = os.getenv('REPORT_DIR', 'reports')
 
 
@@ -33,5 +33,5 @@ def validate_jira_config():
 
 def validate_agent_config():
     validate_jira_config()
-    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith('paste-'):
-        raise RuntimeError('Missing GEMINI_API_KEY')
+    if not GROQ_API_KEY or GROQ_API_KEY.startswith('paste-'):
+        raise RuntimeError('Missing GROQ_API_KEY')

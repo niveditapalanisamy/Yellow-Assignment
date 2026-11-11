@@ -25,9 +25,9 @@ services:
         value: tyn-release-assessment-v2
       - key: JIRA_ISSUE_TYPE
         value: Task
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
-      - key: GEMINI_MODEL
-        value: gemini-3.5-flash
-      - key: GEMINI_MIN_INTERVAL_SECONDS
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_MIN_INTERVAL_SECONDS
         value: "5"

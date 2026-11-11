@@ -7,9 +7,9 @@ The root `render.yaml` defines a free Python web service. Source repository:
 
 1. Push the tested source, `render.yaml` and existing `submission/` artifacts to the repository. Do not push `.env`, local browser profiles, virtual environments or credentials.
 2. In Render, choose **New > Blueprint**, connect the GitHub repository, and use its `render.yaml`.
-3. Enter the secret environment values requested by the Blueprint: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GEMINI_API_KEY`. Use the dedicated project and dataset scope already configured. The importer does not need to run again for the records already in Jira.
+3. Enter the secret environment values requested by the Blueprint: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `GROQ_API_KEY`. Use the dedicated project and dataset scope already configured. The importer does not need to run again for the records already in Jira.
 4. Deploy. The build runs the standard-library tests, then starts `python app.py`. Render supplies `PORT` and `RENDER_EXTERNAL_URL`; the application binds `0.0.0.0` and trusts only the configured external origin and local addresses.
-5. Open the service's HTTPS URL. The dashboard, reports, Jira import and live Jira/Gemini assessments are accessible without a username or password.
+5. Open the service's HTTPS URL. The dashboard, reports, Jira import and live Jira/Groq assessments are accessible without a username or password.
 
 All application routes are public, as requested by the owner. Jira and model credentials stay in Render environment secrets and are never returned to the browser. Requests must still use the configured host and browser origin, and one operation runs at a time. `/api/health` returns only `{"status":"ok"}` for Render health checks. For custom domains, set `PUBLIC_BASE_URL` to the exact HTTPS origin and redeploy. `APP_USERNAME` and `APP_PASSWORD` are no longer used and can be removed from existing services.
 

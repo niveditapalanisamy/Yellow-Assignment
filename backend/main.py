@@ -112,8 +112,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, (ROOT/'frontend/index.html').read_text(encoding='utf-8'), 'text/html')
         if path == '/api/config':
             return self.send(200, {'project': config.JIRA_PROJECT_KEY, 'dataset_label': config.JIRA_DATASET_LABEL,
-                'model': config.GEMINI_MODEL, 'jira_configured': bool(config.JIRA_API_TOKEN),
-                'model_configured': bool(config.GEMINI_API_KEY)})
+                'model': config.GROQ_MODEL, 'jira_configured': bool(config.JIRA_API_TOKEN),
+                'model_configured': bool(config.GROQ_API_KEY)})
         if path in ('/api/status', '/api/import/status', '/api/assessment/status'):
             with app.lock:
                 state = dict(app.state)

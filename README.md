@@ -1,10 +1,12 @@
 # Jira Release Evidence Agent
 
-A Jira Cloud importer and bounded Gemini tool-calling agent. It checks the mandatory requirements linked from a release manifest, investigates ticket comments and dependencies, and produces a release report with exact Jira comment references. A ticket's workflow status cannot approve a requirement.
+A Jira Cloud importer and bounded Groq tool-calling agent. It checks the mandatory requirements linked from a release manifest, investigates ticket comments and dependencies, and produces a release report with exact Jira comment references. A ticket's workflow status cannot approve a requirement.
+
+See the [end-to-end scenarios](docs/END_TO_END_SCENARIOS.md) for production inputs and expected outputs.
 
 The application uses Python **3.12+**, with **no third-party runtime dependencies**. The tested interpreter is pinned in `.python-version`. Optional test dependencies are pinned in `requirements-dev.txt`.
 
-The actual Jira/Gemini run is included: [release report](submission/report.md), [structured decisions and metrics](submission/report.json), [investigation trace](submission/trace.jsonl), and [validation results](submission/README.md). It completed in **104.813 seconds**, with **8 model calls**, **22 tool calls**, and **60,315 reported tokens**. All 12 decisions matched the independent regression check: **4 PASS, 4 FAIL, 4 INSUFFICIENT_EVIDENCE; overall BLOCKED**. All **42 tests** passed in a clean virtual environment without runtime packages.
+The historical Jira/Gemini run is included (it predates the Groq migration): [release report](submission/report.md), [structured decisions and metrics](submission/report.json), [investigation trace](submission/trace.jsonl), and [validation results](submission/README.md). It completed in **104.813 seconds**, with **8 model calls**, **22 tool calls**, and **60,315 reported tokens**. All 12 decisions matched the independent regression check: **4 PASS, 4 FAIL, 4 INSUFFICIENT_EVIDENCE; overall BLOCKED**. All **42 tests** passed in a clean virtual environment without runtime packages.
 
 ## Setup
 
@@ -17,7 +19,7 @@ python -m venv .venv
 Copy-Item .env.example .env
 ```
 
-Edit `.env` locally with your actual Jira site URL, Jira login email, Jira API token, Gemini key and project. Never commit that file. Use a model supporting Gemini `generateContent` function calling; the actual run's model is recorded in its report. Model availability depends on the account; HTTP 404 can indicate a retired or unavailable model. Restart the application after changing configuration.
+Edit `.env` locally with your actual Jira site URL, Jira login email, Jira API token, Groq key and project. Never commit that file. Use a Groq model supporting tool calling (default: `openai/gpt-oss-120b`); the actual run's model is recorded in its report. Model availability depends on the account; HTTP 404 can indicate a retired or unavailable model. Restart the application after changing configuration.
 
 There is no runtime `pip install` step. Commands below work with `python` or `.\.venv\Scripts\python.exe`.
 
@@ -56,9 +58,9 @@ reports/<UTC timestamp>-<run ID>/
 
 The model selects `get_evidence_bundle` for up to three requirement roots, receiving their complete comments and recursively linked dependencies, then submits `submit_decisions`. It can also use `get_record` and `search_issues` for further investigation. Evidence is not preloaded into the initial model context. With `--batch-size 1`, it uses individual reads and `submit_decision`. A record read includes **all comment pages** and forward source links. The controller scopes every Jira read, requires recursive linked-record inspection, validates citations against exact retrieved comments, validates decision enums, and computes the overall status itself. Model output cannot independently claim overall readiness.
 
-Each group of at most three requirements has an isolated conversation, reducing calls to fit small provider quotas. Defaults: 14 model turns and 36 tool actions per group, 240,000 context characters per group, 150,000 characters per record, 30 records / 180,000 characters per bundle, 30-second Jira requests, 90-second model requests, and a 1,200-second overall investigation budget. Gemini uses LOW thinking and temperature 1. Exceeding a limit never silently discards evidence or approves a requirement. Use `--timeout` to change the wall-clock budget and `--batch-size 1` for individual investigations. The controller records tool/model failures and assigns incomplete groups `INSUFFICIENT_EVIDENCE`. Failed manifest discovery produces a failed-run artifact with no invented requirement decisions. Partial or failed execution is explicitly distinguished from an evidence-based release decision.
+Each group of at most three requirements has an isolated conversation, reducing calls to fit small provider quotas. Defaults: 14 model turns and 36 tool actions per group, 240,000 context characters per group, 150,000 characters per record, 30 records / 180,000 characters per bundle, 30-second Jira requests, 90-second model requests, and a 1,200-second overall investigation budget. Groq uses temperature 0 to reduce sampling variability; repeated decisions may still vary. Exceeding a limit never silently discards evidence or approves a requirement. Use `--timeout` to change the wall-clock budget and `--batch-size 1` for individual investigations. The controller records tool/model failures and assigns incomplete groups `INSUFFICIENT_EVIDENCE`. Failed manifest discovery produces a failed-run artifact with no invented requirement decisions. Partial or failed execution is explicitly distinguished from an evidence-based release decision.
 
-`GEMINI_MIN_INTERVAL_SECONDS` defaults to 5 to pace model requests for account rate limits. Increase it if your account has a lower request allowance. The transport additionally retries 429/5xx responses within its bounded retry policy.
+`GROQ_MIN_INTERVAL_SECONDS` defaults to 5 to pace model requests for account rate limits. Increase it if your account has a lower request allowance. The transport additionally retries 429/5xx responses within its bounded retry policy.
 
 | Requirement evidence | Decision |
 |---|---|
@@ -66,7 +68,7 @@ Each group of at most three requirements has an isolated conversation, reducing 
 | Applicable demonstrated failure | FAIL |
 | Missing, inapplicable or genuinely inconclusive evidence | INSUFFICIENT_EVIDENCE |
 
-Any mandatory FAIL → **BLOCKED**. Otherwise any insufficient requirement → **NEEDS_REVIEW**. All mandatory requirements PASS → **READY**. An empty/incomplete investigation cannot produce READY.
+Any mandatory FAIL Ã¢â€ â€™ **BLOCKED**. Otherwise any insufficient requirement Ã¢â€ â€™ **NEEDS_REVIEW**. All mandatory requirements PASS Ã¢â€ â€™ **READY**. An empty/incomplete investigation cannot produce READY.
 
 ## Local dashboard
 
@@ -117,12 +119,12 @@ python scripts/package_submission.py
 python scripts/smoke_package.py
 ```
 
-The packager creates `jira-release-evidence-agent.zip` from an explicit source/artifact allowlist, excludes `.env`, environments, caches and local state, and scans for the configured Jira and Gemini key values. `submission/` contains the actual generated report, trace, execution measurements and validation results when a live run has completed. See [design and limitations](docs/DESIGN.md) for architecture and AI-assistance disclosure.
+The packager creates `jira-release-evidence-agent.zip` from an explicit source/artifact allowlist, excludes `.env`, environments, caches and local state, and scans for the configured Jira and Groq key values. `submission/` contains the actual generated report, trace, execution measurements and validation results when a live run has completed. See [design and limitations](docs/DESIGN.md) for architecture and AI-assistance disclosure.
 
 ## Troubleshooting
 
 - **401 / 403:** check the token, login email and project permissions; never put keys in issue text.
-- **404:** verify the project/site; for Gemini verify model availability for your account.
+- **404:** verify the project/site; for Groq verify model availability for your account.
 - **400 on Jira create:** check issue type, required fields and Jira project configuration.
 - **429 / 5xx:** read requests retry at most three attempts with capped waits. Import writes report failures for a safe rerun.
 - **Network/model timeout:** inspect the trace and execution status. No offline mock is substituted for a real run.

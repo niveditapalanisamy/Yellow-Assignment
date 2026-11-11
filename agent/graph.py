@@ -8,7 +8,7 @@ import uuid
 
 from . import config
 from .jira_client import JiraClient, adf_to_text, source_id
-from .model import GeminiModel
+from .model import GroqModel
 from .report import render_report
 from .tools import EvidenceTools, DECLARATIONS, target_from_description
 
@@ -33,7 +33,7 @@ def assess(project=None, dataset_label=None, release='R2.4', *, client=None, mod
     result = {'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat(),
         'project': project or config.JIRA_PROJECT_KEY, 'dataset_label': dataset_label or config.JIRA_DATASET_LABEL,
         'requested_release': release, 'execution_status': 'FAILED', 'requirements': [], 'errors': [],
-        'metrics': {'model': getattr(model, 'name', config.GEMINI_MODEL), 'model_calls': 0,
+        'metrics': {'model': getattr(model, 'name', config.GROQ_MODEL), 'model_calls': 0,
             'tool_calls': 0, 'usage': {}, 'elapsed_seconds': 0}}
     trace_file = (output / 'trace.jsonl').open('w', encoding='utf-8')
 
@@ -83,7 +83,7 @@ def assess(project=None, dataset_label=None, release='R2.4', *, client=None, mod
             requirements.append(issue)
         if len({source_id(x) for x in requirements}) != len(requirements):
             raise ValueError('Duplicate requirement source IDs')
-        model = model or GeminiModel()
+        model = model or GroqModel()
         if hasattr(getattr(model, 'http', None), 'deadline'):
             model.http.deadline = deadline
         if batch_size > 1 and len(requirements) > 1:
@@ -141,7 +141,7 @@ def assess(project=None, dataset_label=None, release='R2.4', *, client=None, mod
                             # Correctable submission errors are feedback, not missing Jira data.
                             if name != 'submit_decision':
                                 errors.append(str(exc))
-                        # Gemini's FunctionResponse.response must be an object, including search results.
+                        # Keep tool results in a consistent object envelope, including search results.
                         function_response = {'name': name, 'response': value if isinstance(value, dict) else {'result': value}}
                         if 'id' in action:
                             function_response['id'] = action['id']
