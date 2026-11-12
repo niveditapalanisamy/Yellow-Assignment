@@ -56,6 +56,26 @@ class BatchedTests(unittest.TestCase):
         self.assertEqual(len(result['requirements']), 3)
         self.assertIn('exactly one decision', json.dumps(model.seen[-1]))
 
+    def test_group_over_provider_request_limit_is_split(self):
+        from agent.http import APIError
+        keys = [self.keys[s] for s in ('REQ-01', 'REQ-02', 'REQ-03')]
+
+        class TooLargeFirst(ScriptedModel):
+            def invoke(inner, system, contents, declarations):
+                if not inner.seen:
+                    inner.seen.append(None)
+                    raise APIError('POST /chat/completions: HTTP 413: Request too large', 413)
+                return super().invoke(system, contents, declarations)
+
+        single = lambda d: [('get_evidence_bundle', {'requirement_keys': [d['requirement_key']]}),
+                            ('submit_decisions', {'decisions': [d]})]
+        actions = [a for d in self.decisions() for a in single(d)]
+        result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=TooLargeFirst(actions),
+                        output_dir=self.path, batch_size=3)
+        self.assertEqual(result['execution_status'], 'COMPLETED')
+        self.assertEqual([x['jira_key'] for x in result['requirements']], keys)
+        self.assertTrue(any('split' in w for w in result['warnings']))
+
     def test_unknown_root_and_budget_cannot_approve(self):
         model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': ['OTHER-1']})])
         result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path, max_turns=1)

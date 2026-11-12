@@ -15,7 +15,7 @@ def package():
         files.extend(p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts
             and p.suffix in ('.py', '.json', '.jsonl', '.md', '.html', '.txt', '.svg', '.png'))
     import os
-    secrets = [x.encode() for x in (config.JIRA_API_TOKEN, config.GROQ_API_KEY, os.getenv('RENDER_API_KEY', '')) if len(x) >= 12]
+    secrets = [x.encode() for x in (config.JIRA_API_TOKEN, config.GROQ_API_KEY, config.OLLAMA_API_KEY, os.getenv('RENDER_API_KEY', '')) if len(x) >= 12]
     for p in files:
         if any(s in p.read_bytes() for s in secrets):
             raise RuntimeError('Credential scan failed: ' + str(p.relative_to(ROOT)))

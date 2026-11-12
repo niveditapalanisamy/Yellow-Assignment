@@ -64,7 +64,7 @@ def issue_fields(rec, jira):
     slug = lambda x: re.sub('[^a-z0-9_-]+', '-', x.lower()).strip('-')
     return {'project': {'key': jira.project}, 'summary': f"[{rec['source_id']}] {rec['summary']}"[:255],
         'issuetype': {'name': os.getenv('JIRA_ISSUE_TYPE', 'Task')},
-        'labels': [jira.label, 'tyn-kind-' + slug(rec['kind']), 'tyn-release-' + slug(rec['release'])],
+        'labels': [jira.label, config.KIND_LABEL_PREFIX + slug(rec['kind']), config.RELEASE_LABEL_PREFIX + slug(rec['release'])],
         'description': to_adf(description(rec, jira.label))}
 
 

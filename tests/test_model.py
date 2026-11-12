@@ -1,4 +1,5 @@
 ﻿import json
+import os
 import unittest
 from unittest.mock import patch
 
@@ -9,7 +10,9 @@ from agent.tools import DECLARATIONS
 
 class ModelTests(unittest.TestCase):
     def setUp(self):
-        with patch('agent.config.GROQ_API_KEY', 'synthetic-test-key'):
+        # Defaults only: local .env pacing/token overrides must not change these tests.
+        overrides = {k: v for k, v in os.environ.items() if not k.startswith(('LLM_', 'GROQ_'))}
+        with patch('agent.config.GROQ_API_KEY', 'synthetic-test-key'), patch.dict(os.environ, overrides, clear=True):
             self.model = GroqModel()
         self.model.min_interval = 0
 
@@ -65,6 +68,30 @@ class ModelTests(unittest.TestCase):
             with patch.object(self.model.http, 'request', return_value=self.result(arguments)):
                 with self.assertRaises(APIError):
                     self.model.invoke('Policy', [], DECLARATIONS)
+
+    def test_malformed_tool_call_is_resampled(self):
+        malformed = APIError('POST /chat/completions: HTTP 400: Failed to parse tool call arguments as JSON', 400)
+        with patch.object(self.model.http, 'request', side_effect=[malformed, self.result()]) as request:
+            response, _ = self.model.invoke('Policy', [], DECLARATIONS)
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(request.call_args.kwargs['json_body']['temperature'], 0.3)
+        self.assertIn('Failed to parse tool call arguments', request.call_args.kwargs['json_body']['messages'][-1]['content'])
+        self.assertEqual(response['parts'][0]['functionCall']['name'], 'get_record')
+
+    def test_request_over_token_limit_reserves_smaller_completion(self):
+        too_large = APIError('POST /chat/completions: HTTP 413: Request too large on tokens per minute (TPM): '
+                             'Limit 8000, Requested 8632, please reduce your message size', 413)
+        with patch.object(self.model.http, 'request', side_effect=[too_large, self.result()]) as request:
+            self.model.invoke('Policy', [], DECLARATIONS)
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(request.call_args.kwargs['json_body']['max_completion_tokens'], 4096 - 632 - 64)
+
+    def test_other_client_errors_are_not_resampled(self):
+        error = APIError('POST /chat/completions: HTTP 400: invalid model', 400)
+        with patch.object(self.model.http, 'request', side_effect=error) as request:
+            with self.assertRaises(APIError):
+                self.model.invoke('Policy', [], DECLARATIONS)
+        self.assertEqual(request.call_count, 1)
 
     def test_missing_key_rejected(self):
         with patch('agent.config.GROQ_API_KEY', ''):

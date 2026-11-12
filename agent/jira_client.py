@@ -102,8 +102,7 @@ class JiraClient:
         while True:
             page = self.request('GET', f'/issue/{key}/comment', params={'startAt': start, 'maxResults': 100})
             batch = page.get('comments', [])
-            result.extend({'id': str(c['id']), 'body': adf_to_text(c.get('body')).strip(),
-                'metadata_note': 'Native author/time are importer metadata; use recorded actors/events in body.'} for c in batch)
+            result.extend({'id': str(c['id']), 'body': adf_to_text(c.get('body')).strip()} for c in batch)
             start += len(batch)
             if start >= page.get('total', 0):
                 return result

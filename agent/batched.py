@@ -3,8 +3,19 @@ from copy import deepcopy
 import json
 import time
 
+from . import config
 from .tools import DECLARATIONS, EvidenceTools, object_schema, STRING
 from .jira_client import source_id
+
+CORRECTABLE_ERRORS = (ValueError, TypeError)
+
+
+class GroupTooLarge(RuntimeError):
+    """The group's request or answer exceeds the provider's per-request limits; split it."""
+
+
+def _too_large(exc):
+    return getattr(exc, 'status', None) == 413 or 'completion limit' in str(exc)
 
 
 def investigate_group(issues, manifest, target, jira, model, system, call, trace, metrics,
@@ -23,41 +34,45 @@ def investigate_group(issues, manifest, target, jira, model, system, call, trace
 
     def bundle(requirement_keys):
         if not isinstance(requirement_keys, list) or not 1 <= len(requirement_keys) <= 3 or not set(requirement_keys) <= set(roots):
-            raise ValueError('Choose one to three requirement keys from the current group')
+            raise ValueError('Choose one to three requirement keys from the current group: ' + ', '.join(roots))
         pending, records = list(requirement_keys), {}
         while pending:
             key = pending.pop(0)
             if key in records:
                 continue
             if len(records) >= 30:
-                raise ValueError('Evidence bundle record budget exceeded')
+                raise RuntimeError('Evidence bundle record budget exceeded')
             record = tools.get_record(key)
             records[key] = record
             pending.extend(link['key'] for link in record['links'])
         if len(json.dumps(records)) > 180000:
-            raise ValueError('Evidence bundle context budget exceeded')
+            raise RuntimeError('Evidence bundle context budget exceeded')
         return {'records': list(records.values())}
 
     def submit(decisions):
         if not isinstance(decisions, list) or len(decisions) != len(roots) or {x.get('requirement_key') for x in decisions} != set(roots):
-            raise ValueError('Submit exactly one decision for every requirement key in the group')
+            raise ValueError('Submit exactly one decision for every requirement key in the group: ' + ', '.join(roots))
         for decision in decisions:
             tools.validate_decision(decision, decision['requirement_key'])
         return {'accepted': True, 'decisions': decisions}
 
-    contents = [{'role': 'user', 'parts': [{'text': json.dumps({'target': target, 'manifest': manifest,
+    # Only the manifest policy: its link list names every requirement and would pull
+    # the model outside this group's isolated investigation.
+    policy = {'key': manifest['key'], 'source_id': manifest.get('source_id'), 'policy': manifest['description']}
+    contents = [{'role': 'user', 'parts': [{'text': json.dumps({'target': target, 'manifest': policy,
+        'group_requirement_keys': list(roots),
         'requirements': [{'key': key, 'source_id': source_id(x), 'summary': x['fields']['summary']} for key, x in roots.items()],
-        'instruction': 'Choose get_evidence_bundle for this small group, investigate the returned evidence, then submit_decisions for every requirement. Prefer one bundled read and one batch submission; use other tools when further investigation is necessary.'})}]}]
+        'instruction': 'Call get_evidence_bundle once with exactly group_requirement_keys (all of them), investigate the returned evidence, then submit_decisions for every requirement. Prefer one bundled read and one batch submission; use other tools when further investigation is necessary.'})}]}]
     group_id = ','.join(source_id(x) for x in issues)
     system += '\nYou are assessing a small group of at most three requirements with isolated group context. Select get_evidence_bundle to inspect all comments and recursive links for your chosen requirement roots. Use submit_decisions (plural) to submit all decisions together. Keep each rationale concise but address applicability, misleading evidence and outstanding work.'
-    accepted, errors, tool_count = None, [], 0
+    accepted, errors, warnings, tool_count = None, [], [], 0
     try:
         for turn in range(max_turns):
-            if time.monotonic() >= deadline or len(json.dumps(contents)) > 240000:
+            if time.monotonic() >= deadline or len(json.dumps(contents)) > config.AGENT_MAX_CONTEXT_CHARS:
                 raise RuntimeError('Investigation time or context budget exhausted')
             metrics['model_calls'] += 1
             response, usage = model.invoke(system, contents, declarations)
-            for key, value in usage.items():
+            for key, value in (usage or {}).items():
                 if isinstance(value, (int, float)):
                     metrics['usage'][key] = metrics['usage'].get(key, 0) + value
             trace('model', requirement_id=group_id, turn=turn, response=response, usage=usage)
@@ -79,10 +94,16 @@ def investigate_group(issues, manifest, target, jira, model, system, call, trace
                     value = call(name, args, fn)
                     if name == 'submit_decisions':
                         accepted = value['decisions']
+                except CORRECTABLE_ERRORS as exc:
+                    # Invalid arguments or a rejected submission: feedback the model can act on.
+                    value = {'error': str(exc) or type(exc).__name__,
+                             'instruction': 'Correct the call or report insufficient evidence honestly.'}
+                    warnings.append(f'{name}: {value["error"]}')
                 except Exception as exc:
-                    value = {'error': str(exc) or type(exc).__name__}
-                    if name != 'submit_decisions':
-                        errors.append(value['error'])
+                    # Jira/transport failure or exhausted budget: evidence may be missing.
+                    value = {'error': str(exc) or type(exc).__name__,
+                             'instruction': 'This read failed; do not assume its content.'}
+                    errors.append(value['error'])
                 response_item = {'name': name, 'response': value if isinstance(value, dict) else {'result': value}}
                 if 'id' in action:
                     response_item['id'] = action['id']
@@ -95,6 +116,9 @@ def investigate_group(issues, manifest, target, jira, model, system, call, trace
         if accepted is None:
             raise RuntimeError('Investigation turn budget exhausted')
     except Exception as exc:
+        if len(issues) > 1 and _too_large(exc):
+            trace('group_too_large', requirement_id=group_id, error=str(exc))
+            raise GroupTooLarge(str(exc)) from exc
         errors.append(str(exc) or type(exc).__name__)
         trace('model_error', requirement_id=group_id, error=errors[-1])
     decisions = []
@@ -109,4 +133,4 @@ def investigate_group(issues, manifest, target, jira, model, system, call, trace
             'requirement_name': issue['fields']['summary'].split('] ', 1)[-1], 'jira_key': root})
         decisions.append(decision)
         trace('decision', **decision)
-    return decisions, [group_id + ': ' + x for x in errors]
+    return decisions, [group_id + ': ' + x for x in errors], [group_id + ': ' + x for x in warnings]

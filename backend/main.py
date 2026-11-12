@@ -23,7 +23,7 @@ class Application:
     def start(self, operation, payload):
         project = payload.get('project', config.JIRA_PROJECT_KEY)
         label = payload.get('dataset_label', config.JIRA_DATASET_LABEL)
-        release = payload.get('release', 'R2.4')
+        release = payload.get('release') or config.DEFAULT_RELEASE
         if not isinstance(release, str) or not release or len(release) > 100:
             raise ValueError('Invalid release')
         from agent.jira_client import JiraClient
@@ -58,33 +58,11 @@ class Application:
                 status = 'failed' if result['failures'] else 'completed'
 
             else:
-                from agent.graph import assess
+                from agent.graph import assess, configured_limits
 
-                print("[AGENT] Starting Jira release assessment...", flush=True)
-
-                result = assess(
-                    project,
-                    label,
-                    release,
-                    output_dir=self.report_dir
-                )
+                result = assess(project, label, release, output_dir=self.report_dir, **configured_limits())
 
                 status = result['execution_status'].lower()
-
-                print(
-                    f"[AGENT] Execution completed: {status}",
-                    flush=True
-                )
-
-                print(
-                    f"[AGENT] Requirements assessed: {len(result['requirements'])}",
-                    flush=True
-                )
-
-                print(
-                    f"[AGENT] Errors: {len(result['errors'])}",
-                    flush=True
-                )
 
                 with self.lock:
                     self.latest = result
@@ -116,10 +94,8 @@ class Handler(BaseHTTPRequestHandler):
     server_version = 'ReleaseEvidence/2.0'
 
     def log_message(self, fmt, *args):
-        print(
-        f"[HTTP] {self.address_string()} - {fmt % args}",
-        flush=True
-    )
+        # Request line only: no bodies, configuration values or authentication headers.
+        print(f'[HTTP] {self.address_string()} - {fmt % args}', flush=True)
 
     def setup(self):
         super().setup()
@@ -167,8 +143,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, (ROOT/'frontend/index.html').read_text(encoding='utf-8'), 'text/html')
         if path == '/api/config':
             return self.send(200, {'project': config.JIRA_PROJECT_KEY, 'dataset_label': config.JIRA_DATASET_LABEL,
-                'model': config.GROQ_MODEL, 'jira_configured': bool(config.JIRA_API_TOKEN),
-                'model_configured': bool(config.GROQ_API_KEY)})
+                'release': config.DEFAULT_RELEASE, 'provider': config.LLM_PROVIDER, 'model': config.llm_model_name(), 'jira_configured': bool(config.JIRA_API_TOKEN),
+                'model_configured': config.llm_configured()})
         if path in ('/api/status', '/api/import/status', '/api/assessment/status'):
             with app.lock:
                 state = dict(app.state)

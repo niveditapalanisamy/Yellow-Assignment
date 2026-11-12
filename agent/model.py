@@ -1,7 +1,11 @@
+"""OpenAI-compatible (Groq / Ollama) tool-calling adapter for the controller's action envelopes.
 
-"""Groq REST tool-calling adapter with bounded context and token diagnostics."""
+Evidence is passed through unchanged: no truncation or dropped history, because
+decisions must cite exact comment text. Hard budgets live in the controller.
+"""
 import json
 import os
+import re
 import time
 from datetime import datetime, timezone
 
@@ -9,354 +13,173 @@ from . import config
 from .http import APIError, JsonHTTP
 
 
-def _env_int(name, default, minimum):
-    try:
-        return max(minimum, int(os.getenv(name, str(default))))
-    except (TypeError, ValueError):
-        return default
-
-
 def _log(message):
-    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    print(f"[{timestamp}] [GROQ] {message}", flush=True)
-
-
-def _compact_text(value, limit):
-    """Bound a tool response while retaining its beginning and ending."""
-    if not isinstance(value, str) or len(value) <= limit:
-        return value
-
-    marker = "\n...[TRUNCATED FOR CONTEXT LIMIT]...\n"
-    remaining = max(0, limit - len(marker))
-    head = int(remaining * 0.75)
-    tail = remaining - head
-    return value[:head] + marker + (value[-tail:] if tail else "")
-
-
-def compact_contents(contents):
-    """
-    Preserve the initial task and recent tool interactions.
-
-    Older interactions are removed as complete assistant/tool-response
-    pairs so that orphaned tool-call IDs are not sent to Groq.
-    """
-    keep_rounds = _env_int("GROQ_KEEP_RECENT_ROUNDS", 3, 1)
-    max_tool_chars = _env_int("GROQ_MAX_TOOL_RESULT_CHARS", 5000, 500)
-    max_initial_chars = _env_int("GROQ_MAX_INITIAL_CONTEXT_CHARS", 12000, 2000)
-
-    if not contents:
-        return []
-
-    # The first user message contains the target and manifest policy.
-    initial = dict(contents[0])
-    initial_parts = []
-    for part in initial.get("parts", []):
-        if "text" in part:
-            initial_parts.append({
-                **part,
-                "text": _compact_text(part["text"], max_initial_chars),
-            })
-        else:
-            initial_parts.append(part)
-    initial["parts"] = initial_parts
-
-    # Treat each assistant tool call and its following tool response as a pair.
-    rounds = []
-    pending = []
-
-    for item in contents[1:]:
-        pending.append(item)
-        if item.get("role") == "user":
-            rounds.append(pending)
-            pending = []
-
-    # Keep a trailing incomplete group only if present.
-    if pending:
-        rounds.append(pending)
-
-    selected = rounds[-keep_rounds:]
-    compacted = [initial]
-
-    for group in selected:
-        for item in group:
-            copied = dict(item)
-            new_parts = []
-
-            for part in copied.get("parts", []):
-                if "functionResponse" in part:
-                    response = dict(part["functionResponse"])
-                    raw = response.get("response", {})
-                    serialized = json.dumps(raw, ensure_ascii=False)
-                    bounded = _compact_text(serialized, max_tool_chars)
-                    response["response"] = bounded
-                    new_parts.append({"functionResponse": response})
-                else:
-                    new_parts.append(part)
-
-            copied["parts"] = new_parts
-            compacted.append(copied)
-
-    return compacted
+    timestamp = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    print(f'[{timestamp}] [GROQ] {message}', flush=True)
 
 
 def messages_for(system, contents):
-    """Convert controller messages into OpenAI-compatible chat messages."""
-    contents = compact_contents(contents)
-    messages = [{"role": "system", "content": system}]
-
+    messages = [{'role': 'system', 'content': system}]
     for content in contents:
-        parts = content.get("parts", [])
-
-        if content.get("role") == "model":
-            calls = []
-
-            for part in parts:
-                if "functionCall" not in part:
-                    continue
-
-                function_call = part["functionCall"]
-                calls.append({
-                    "id": function_call["id"],
-                    "type": "function",
-                    "function": {
-                        "name": function_call["name"],
-                        "arguments": json.dumps(
-                            function_call.get("args", {}),
-                            ensure_ascii=False,
-                            separators=(",", ":"),
-                        ),
-                    },
-                })
-
-            text_parts = [
-                part["text"] for part in parts if "text" in part
-            ]
-
-            # Do not send an assistant message with neither content nor calls.
-            if calls or text_parts:
-                assistant_message = {
-                    "role": "assistant",
-                    "content": "\n".join(text_parts) or None,
-                }
-                if calls:
-                    assistant_message["tool_calls"] = calls
-                messages.append(assistant_message)
-
+        parts = content.get('parts', [])
+        if content['role'] == 'model':
+            calls = [{'id': p['functionCall']['id'], 'type': 'function', 'function': {
+                'name': p['functionCall']['name'],
+                'arguments': json.dumps(p['functionCall']['args'], ensure_ascii=False)}}
+                for p in parts if 'functionCall' in p]
+            message = {'role': 'assistant',
+                'content': '\n'.join(p['text'] for p in parts if 'text' in p) or None}
+            if calls:
+                message['tool_calls'] = calls
+            messages.append(message)
         else:
-            texts = [part["text"] for part in parts if "text" in part]
+            texts = [p['text'] for p in parts if 'text' in p]
             if texts:
-                messages.append({
-                    "role": "user",
-                    "content": "\n".join(texts),
-                })
-
+                messages.append({'role': 'user', 'content': '\n'.join(texts)})
             for part in parts:
-                if "functionResponse" not in part:
-                    continue
-
-                response = part["functionResponse"]
-                response_id = response.get("id")
-
-                # A tool response must have its matching tool-call ID.
-                if not response_id:
-                    continue
-
-                value = response.get("response", {})
-                if not isinstance(value, str):
-                    value = json.dumps(value, ensure_ascii=False)
-
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": response_id,
-                    "content": value,
-                })
-
+                if 'functionResponse' in part:
+                    response = part['functionResponse']
+                    messages.append({'role': 'tool', 'tool_call_id': response['id'],
+                        'content': json.dumps(response['response'], ensure_ascii=False)})
     return messages
 
 
 def json_schema(value):
-    """Normalize JSON-schema type names for the API."""
     if isinstance(value, list):
         return [json_schema(item) for item in value]
-
     if isinstance(value, dict):
-        return {
-            key: (
-                item.lower()
-                if key == "type" and isinstance(item, str)
-                else json_schema(item)
-            )
-            for key, item in value.items()
-        }
-
+        return {key: item.lower() if key == 'type' and isinstance(item, str)
+                else json_schema(item) for key, item in value.items()}
     return value
 
 
-class GroqModel:
-    def __init__(self):
-        if not config.GROQ_API_KEY:
-            raise APIError("Missing GROQ_API_KEY")
+def _setting(name, default):
+    """LLM_<NAME>, falling back to the original GROQ_<NAME> variable."""
+    return os.getenv('LLM_' + name) or os.getenv('GROQ_' + name) or str(default)
 
-        self.name = config.GROQ_MODEL
-        self.min_interval = max(
-            0.0,
-            float(os.getenv("GROQ_MIN_INTERVAL_SECONDS", "60")),
-        )
 
+def _int_setting(name, default, minimum):
+    try:
+        return max(minimum, int(_setting(name, default)))
+    except ValueError:
+        return default
+
+
+class ChatModel:
+    """OpenAI-compatible tool-calling client for Groq or Ollama (Cloud or local)."""
+
+    def __init__(self, provider=None):
+        settings = config.provider_settings(provider)
+        key = settings['api_key']
+        if settings['key_required'] and (not key or key.startswith('paste-')):
+            raise APIError('Missing ' + settings['key_name'])
+        self.provider = settings['provider']
+        self.name = settings['model']
+        try:
+            self.min_interval = max(0.0, float(_setting('MIN_INTERVAL_SECONDS', 5)))
+        except ValueError:
+            self.min_interval = 5.0
+        # Reasoning models spend part of this budget thinking before the tool call.
+        self.max_completion_tokens = _int_setting('MAX_COMPLETION_TOKENS', 4096, 256)
+        timeout = _int_setting('REQUEST_TIMEOUT_SECONDS', 90 if self.provider == 'groq' else 300, 5)
         self.last_call = 0.0
+        headers = {'User-Agent': 'jira-release-agent/1.0'}
+        if key:
+            headers['Authorization'] = 'Bearer ' + key
+        self.http = JsonHTTP(settings['base_url'], headers, timeout=timeout)
 
-        request_timeout = _env_int(
-            "GROQ_REQUEST_TIMEOUT_SECONDS", 90, 5
-        )
-        self.max_completion_tokens = _env_int(
-            "GROQ_MAX_COMPLETION_TOKENS", 512, 128
-        )
+    MALFORMED_TOOL_CALL = ('tool call', 'tool_use_failed', 'failed to call a function')
+    MALFORMED_TOOL_CALL_RETRIES = 2
 
-        self.http = JsonHTTP(
-            "https://api.groq.com/openai/v1",
-            {
-                "Authorization": "Bearer " + config.GROQ_API_KEY,
-                "User-Agent": "jira-release-agent/1.0",
-            },
-            timeout=request_timeout,
-        )
+    MIN_COMPLETION_BUDGET = 768
 
-        _log(
-            f"Initialized: model={self.name}, "
-            f"timeout={request_timeout}s, "
-            f"minimum_interval={self.min_interval}s, "
-            f"max_completion_tokens={self.max_completion_tokens}, "
-            f"keep_recent_rounds={_env_int('GROQ_KEEP_RECENT_ROUNDS', 3, 1)}, "
-            f"max_tool_chars={_env_int('GROQ_MAX_TOOL_RESULT_CHARS', 5000, 500)}"
-        )
+    def _fitting_completion_budget(self, exc, current):
+        """For a 413 that states 'Limit N, Requested M', a completion budget that fits, else None."""
+        if exc.status != 413:
+            return None
+        match = re.search(r'Limit (\d+), Requested (\d+)', str(exc))
+        if not match:
+            return None
+        limit, requested = int(match.group(1)), int(match.group(2))
+        budget = current - (requested - limit) - 64
+        return budget if self.MIN_COMPLETION_BUDGET <= budget < current else None
 
     def invoke(self, system, contents, declarations):
-        """Send a bounded tool-calling request."""
-        delay = max(
-            0.0,
-            self.last_call + self.min_interval - time.monotonic(),
-        )
-
+        delay = max(0.0, self.last_call + self.min_interval - time.monotonic())
         if self.http.deadline and time.monotonic() + delay >= self.http.deadline:
-            raise APIError("Model pacing would exceed execution deadline")
-
+            raise APIError('Model pacing would exceed execution deadline')
         if delay:
-            _log(f"Rate pacing: waiting {delay:.1f}s")
             time.sleep(delay)
-
         messages = messages_for(system, contents)
-
-        tools = [
-            {
-                "type": "function",
-                "function": json_schema(declaration),
-            }
-            for declaration in declarations
-        ]
-
-        payload = {
-            "model": self.name,
-            "messages": messages,
-            "tools": tools,
-            "tool_choice": "required",
-            "temperature": 0,
-            "max_completion_tokens": self.max_completion_tokens,
-        }
-
-        serialized_messages = json.dumps(
-            messages, ensure_ascii=False, separators=(",", ":")
-        )
-        serialized_payload = json.dumps(
-            payload, ensure_ascii=False, separators=(",", ":")
-        )
-
-        message_bytes = len(serialized_messages.encode("utf-8"))
-        payload_bytes = len(serialized_payload.encode("utf-8"))
-
-        # Rough diagnostic only; actual tokenization varies by model.
-        estimated_input_tokens = max(1, message_bytes // 4)
-
-        _log(
-            f"Request: messages={len(messages)}, tools={len(tools)}, "
-            f"message_bytes={message_bytes}, payload_bytes={payload_bytes}, "
-            f"estimated_input_tokens~{estimated_input_tokens}, "
-            f"max_output_tokens={self.max_completion_tokens}"
-        )
-
-        request_started = time.monotonic()
-        self.last_call = request_started
-
-        try:
-            result = self.http.request(
-                "POST",
-                "/chat/completions",
-                json_body=payload,
-                retry=True,
-            )
-        except Exception as exc:
-            elapsed = time.monotonic() - request_started
-            _log(
-                f"Request failed after {elapsed:.1f}s: "
-                f"{type(exc).__name__}: {exc}"
-            )
-            raise
-
-        elapsed = time.monotonic() - request_started
-        choices = result.get("choices", []) if isinstance(result, dict) else []
-
+        self.last_call = time.monotonic()
+        payload = {'model': self.name, 'messages': messages,
+            'tools': [{'type': 'function', 'function': json_schema(d)} for d in declarations],
+            'tool_choice': 'required', 'temperature': 0}
+        # Ollama's OpenAI-compatible API reads max_tokens; Groq uses max_completion_tokens.
+        payload['max_tokens' if self.provider == 'ollama' else 'max_completion_tokens'] = self.max_completion_tokens
+        for attempt in range(self.MALFORMED_TOOL_CALL_RETRIES + 1):
+            try:
+                result = self.http.request('POST', '/chat/completions', json_body=payload, retry=True)
+                break
+            except APIError as exc:
+                limit_key = 'max_tokens' if self.provider == 'ollama' else 'max_completion_tokens'
+                smaller = self._fitting_completion_budget(exc, payload[limit_key])
+                if smaller and attempt < self.MALFORMED_TOOL_CALL_RETRIES:
+                    # Groq counts the reserved completion budget toward the per-request
+                    # token limit; reserve less rather than abandoning the investigation.
+                    _log(f'Request over provider token limit; completion budget {payload[limit_key]} -> {smaller}')
+                    payload[limit_key] = smaller
+                    continue
+                # The provider rejected the model's own malformed tool-call JSON (Groq:
+                # tool_use_failed). Nothing was executed, so sampling again is safe.
+                malformed = exc.status == 400 and any(x in str(exc).lower() for x in self.MALFORMED_TOOL_CALL)
+                if not malformed or attempt == self.MALFORMED_TOOL_CALL_RETRIES:
+                    raise
+                payload['temperature'] = 0.3  # identical sampling would likely repeat the error
+                # The provider rejected the call before the model saw any feedback; tell it why
+                # (e.g. a missing required field) so the next attempt can correct it.
+                reason = str(exc).split('HTTP 400:', 1)[-1].strip()[:500]
+                payload['messages'] = messages + [{'role': 'user', 'content':
+                    'Your previous tool call was rejected by the API: ' + reason +
+                    ' Call the tool again with valid JSON arguments that include every required field.'}]
+                _log(f'Malformed tool call from model; resampling ({attempt + 1}/{self.MALFORMED_TOOL_CALL_RETRIES})')
+                self.last_call = time.monotonic()
+        choices = result.get('choices', []) if isinstance(result, dict) else []
+        usage = (result.get('usage') or {}) if isinstance(result, dict) else {}
         if not choices:
-            raise APIError("Groq returned an empty choices array")
-
-        choice = choices[0]
-        message = choice.get("message", {})
-        calls = message.get("tool_calls", []) or []
-        usage = result.get("usage", {}) or {}
-        finish_reason = choice.get("finish_reason")
-
-        _log(
-            f"Response: elapsed={elapsed:.1f}s, "
-            f"finish_reason={finish_reason}, tool_calls={len(calls)}, "
-            f"prompt_tokens={usage.get('prompt_tokens', 'n/a')}, "
-            f"completion_tokens={usage.get('completion_tokens', 'n/a')}, "
-            f"total_tokens={usage.get('total_tokens', 'n/a')}"
-        )
-
-        if finish_reason != "tool_calls" or not calls:
-            preview = str(message.get("content") or "").replace("\n", " ")[:200]
-            if preview:
-                _log(f"Model text preview: {preview}")
-
-            raise APIError(
-                "Groq returned no usable tool calls "
-                f"(finish_reason={finish_reason})"
-            )
-
+            raise APIError(f'{self.provider} returned no choices')
+        finish = choices[0].get('finish_reason')
+        message = choices[0].get('message') or {}
+        calls = message.get('tool_calls') or []
+        _log(f'{self.name}: finish={finish} tool_calls={len(calls)} '
+             f"prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')} "
+             f'in {time.monotonic() - self.last_call:.1f}s')
+        if finish == 'length':
+            raise APIError('Model response hit the completion limit '
+                f'({self.max_completion_tokens}); raise LLM_MAX_COMPLETION_TOKENS')
+        # Some OpenAI-compatible servers report finish_reason=stop alongside tool calls.
+        if not calls or finish not in ('tool_calls', 'stop'):
+            raise APIError(f'{self.provider} returned no usable tool calls (finish_reason={finish})')
         parts = []
-
-        if message.get("content"):
-            parts.append({"text": message["content"]})
-
+        if message.get('content'):
+            parts.append({'text': message['content']})
         try:
-            for tool_call in calls:
-                action = tool_call["function"]
-                arguments = json.loads(action["arguments"])
+            for call in calls:
+                action = call['function']
+                args = json.loads(action['arguments'])
+                if not isinstance(args, dict) or not call['id'] or not action['name']:
+                    raise ValueError('Invalid tool call')
+                parts.append({'functionCall': {'id': call['id'], 'name': action['name'], 'args': args}})
+        except (KeyError, TypeError, ValueError):
+            raise APIError(f'{self.provider} returned an invalid tool call') from None
+        return {'role': 'model', 'parts': parts}, usage
 
-                if (
-                    not isinstance(arguments, dict)
-                    or not tool_call.get("id")
-                    or not action.get("name")
-                ):
-                    raise ValueError("Invalid tool call fields")
 
-                parts.append({
-                    "functionCall": {
-                        "id": tool_call["id"],
-                        "name": action["name"],
-                        "args": arguments,
-                    }
-                })
+class GroqModel(ChatModel):
+    def __init__(self):
+        super().__init__('groq')
 
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
-            raise APIError("Groq returned an invalid tool call") from None
 
-        return {"role": "model", "parts": parts}, usage
+def create_model():
+    """The model client for the configured LLM_PROVIDER."""
+    return ChatModel()

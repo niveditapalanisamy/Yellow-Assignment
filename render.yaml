@@ -25,9 +25,25 @@ services:
         value: tyn-release-assessment-v2
       - key: JIRA_ISSUE_TYPE
         value: Task
+      - key: LLM_PROVIDER
+        value: groq
+      - key: OLLAMA_API_KEY
+        sync: false
+      - key: OLLAMA_MODEL
+        value: gpt-oss:120b
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
       - key: GROQ_MIN_INTERVAL_SECONDS
         value: "5"
+      # Groq free tier: 8k tokens/min per request. Groups of 2 with a 2k completion
+      # budget fit; oversized groups are split automatically.
+      - key: GROQ_MAX_COMPLETION_TOKENS
+        value: "2048"
+      - key: AGENT_BATCH_SIZE
+        value: "2"
+      - key: AGENT_TIMEOUT_SECONDS
+        value: "2400"
+      - key: JIRA_RELEASE
+        value: R2.4

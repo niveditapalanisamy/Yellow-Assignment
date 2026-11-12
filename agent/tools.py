@@ -35,9 +35,11 @@ class EvidenceTools:
         result = {'key': issue_key, 'source_id': source_id(issue),
             'summary': issue['fields']['summary'],
             'description': adf_to_text(issue['fields'].get('description')).strip(),
+            # Stated once per record rather than on every comment (long threads multiply it).
+            'comment_note': 'Native Jira author/time are importer metadata; use the recorded actor, role and event time in each body.',
             'comments': self.jira.get_comments(issue_key), 'links': self.jira.linked_records(issue)}
         if len(json.dumps(result)) > 150000:
-            raise ValueError('Record exceeds context budget; no comments silently truncated')
+            raise RuntimeError('Record exceeds context budget; no comments silently truncated')
         self.records[issue_key] = result
         return result
 

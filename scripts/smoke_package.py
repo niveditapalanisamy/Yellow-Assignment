@@ -19,7 +19,7 @@ def smoke():
                 if Path(member.filename).name == '.env':
                     raise RuntimeError('Credential file in archive')
             archive.extractall(destination)
-        env = {k: v for k, v in os.environ.items() if not k.startswith(('JIRA_', 'GROQ_', 'GOOGLE_'))}
+        env = {k: v for k, v in os.environ.items() if not k.startswith(('JIRA_', 'GROQ_', 'OLLAMA_', 'LLM_', 'GOOGLE_'))}
         result = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-v'],
             cwd=destination, env=env, capture_output=True, text=True, timeout=60)
         text = 'Extracted submission tested without Jira/Groq environment variables.\n' + result.stdout + result.stderr

@@ -31,7 +31,7 @@ class APITests(unittest.TestCase):
         status, body, _ = self.request('GET', '/api/config')
         self.assertEqual(status, 200)
         from agent import config
-        for secret in (config.JIRA_API_TOKEN, config.GROQ_API_KEY):
+        for secret in (config.JIRA_API_TOKEN, config.GROQ_API_KEY, config.OLLAMA_API_KEY):
             if secret:
                 self.assertNotIn(secret, body)
 
