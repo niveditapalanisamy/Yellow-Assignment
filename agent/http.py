@@ -26,7 +26,7 @@ class JsonHTTP:
         if not path.startswith('/') or '://' in path:
             raise APIError('Only relative API paths are allowed')
         body = None if json_body is None else json.dumps(json_body).encode('utf-8')
-        for attempt in range(3 if retry else 1):
+        for attempt in range(5 if retry else 1):
             remaining = self.timeout if self.deadline is None else min(self.timeout, self.deadline - time.monotonic())
             if remaining <= 0:
                 raise APIError('Execution deadline exceeded')
@@ -37,11 +37,11 @@ class JsonHTTP:
                     raw = response.read()
                     return json.loads(raw) if raw else None
             except urllib.error.HTTPError as exc:
-                if retry and (exc.code == 429 or exc.code >= 500) and attempt < 2:
+                if retry and (exc.code == 429 or exc.code >= 500) and attempt < 4:
                     try:
-                        delay = min(float(exc.headers.get('Retry-After', 2 ** attempt)), 10)
+                        delay = min(float(exc.headers.get('Retry-After', min(2 ** attempt, 20))), 30)
                     except ValueError:
-                        delay = 2 ** attempt
+                        delay = min(2 ** attempt, 20)
                     if self.deadline and time.monotonic() + delay >= self.deadline:
                         raise APIError('Execution deadline exceeded', exc.code) from None
                     time.sleep(max(0, delay))

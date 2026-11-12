@@ -39,7 +39,7 @@ class BatchedTests(unittest.TestCase):
     def test_model_selects_bundle_before_evidence_is_in_context(self):
         model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': [self.keys['REQ-01'], self.keys['REQ-02'], self.keys['REQ-03']]}),
             ('submit_decisions', {'decisions': self.decisions()})])
-        result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path)
+        result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path, batch_size=3)
         self.assertEqual(result['execution_status'], 'COMPLETED')
         self.assertEqual(result['overall_decision'], 'READY')
         self.assertEqual(len(result['requirements']), 3)
@@ -51,7 +51,7 @@ class BatchedTests(unittest.TestCase):
         model = ScriptedModel([('get_evidence_bundle', {'requirement_keys': [self.keys['REQ-01'], self.keys['REQ-02'], self.keys['REQ-03']]}),
             ('submit_decisions', {'decisions': self.decisions()[:2]}),
             ('submit_decisions', {'decisions': self.decisions()})])
-        result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path)
+        result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path, batch_size=3)
         self.assertEqual(result['execution_status'], 'COMPLETED')
         self.assertEqual(len(result['requirements']), 3)
         self.assertIn('exactly one decision', json.dumps(model.seen[-1]))
