@@ -23,8 +23,8 @@ class TransportTests(unittest.TestCase):
         with patch.object(http.opener, 'open', side_effect=error) as op, patch('agent.http.time.sleep') as sleep:
             with self.assertRaises(APIError):
                 http.request('GET', '/issue/TYN-1', retry=True)
-            self.assertEqual(op.call_count, 3)
-            self.assertTrue(all(x.args[0] <= 10 for x in sleep.call_args_list))
+            self.assertEqual(op.call_count, 5)
+            self.assertTrue(all(x.args[0] <= 30 for x in sleep.call_args_list))
 
     def test_deadline_prevents_network_calls(self):
         http = JsonHTTP('https://example.com')

@@ -24,7 +24,7 @@ Submit through submit_decision. Include precise comment IDs and EXACT quotes, ex
 
 
 def assess(project=None, dataset_label=None, release='R2.4', *, client=None, model=None,
-           output_dir=None, max_turns=14, max_tools=36, timeout_seconds=1200, batch_size=3):
+           output_dir=None, max_turns=14, max_tools=36, timeout_seconds=1200, batch_size=1):
     started = time.monotonic()
     deadline = started + timeout_seconds
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('--release', default='R2.4')
     parser.add_argument('--output', default=config.REPORT_DIR)
     parser.add_argument('--timeout', type=int, default=1200)
-    parser.add_argument('--batch-size', type=int, choices=(1, 2, 3), default=3)
+    parser.add_argument('--batch-size', type=int, choices=(1, 2, 3), default=1)
     args = parser.parse_args()
     result = assess(args.project, args.dataset_label, args.release, output_dir=args.output, timeout_seconds=args.timeout, batch_size=args.batch_size)
     print(json.dumps(result, indent=2))

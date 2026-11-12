@@ -32,6 +32,7 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(self.model.http.headers['Authorization'], 'Bearer synthetic-test-key')
         self.assertEqual(payload['tool_choice'], 'required')
         self.assertEqual(payload['temperature'], 0)
+        self.assertEqual(payload['max_completion_tokens'], 4096)
         self.assertEqual(payload['messages'][0], {'role': 'system', 'content': 'System policy'})
         schema = payload['tools'][-1]['function']['parameters']
         self.assertEqual(schema['type'], 'object')

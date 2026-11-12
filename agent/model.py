@@ -1,4 +1,4 @@
-﻿"""Groq REST tool-calling adapter for the controller's action envelopes."""
+"""Groq REST tool-calling adapter for the controller's action envelopes."""
 import json
 import os
 import time
@@ -44,7 +44,7 @@ class GroqModel:
         if not config.GROQ_API_KEY:
             raise APIError('Missing GROQ_API_KEY')
         self.name = config.GROQ_MODEL
-        self.min_interval = max(0, float(os.getenv('GROQ_MIN_INTERVAL_SECONDS', '5')))
+        self.min_interval = max(0, float(os.getenv('GROQ_MIN_INTERVAL_SECONDS', '10')))
         self.last_call = 0
         self.http = JsonHTTP('https://api.groq.com/openai/v1',
             {'Authorization': 'Bearer ' + config.GROQ_API_KEY,
@@ -60,7 +60,7 @@ class GroqModel:
         result = self.http.request('POST', '/chat/completions', json_body={
             'model': self.name, 'messages': messages_for(system, contents),
             'tools': [{'type': 'function', 'function': json_schema(d)} for d in declarations],
-            'tool_choice': 'required', 'temperature': 0, 'max_completion_tokens': 8192}, retry=True)
+            'tool_choice': 'required', 'temperature': 0, 'max_completion_tokens': 4096}, retry=True)
         choices = result.get('choices', [])
         if not choices or choices[0].get('finish_reason') != 'tool_calls':
             raise APIError('Groq returned no usable tool calls or an incomplete response')

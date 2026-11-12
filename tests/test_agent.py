@@ -35,35 +35,39 @@ class AgentTests(unittest.TestCase):
         self.dataset.write_text(json.dumps(fixture()), encoding='utf-8')
         self.jira = client(MemoryJira(page_size=1))
         with contextlib.redirect_stdout(io.StringIO()):
-            run(self.dataset, client=self.jira, summary_path=self.path/'import.json')
+            imported = run(self.dataset, client=self.jira, summary_path=self.path/'import.json')
+        self.keys = imported['mapping']
 
     def decision(self, quote='All 10 tests pass on TEST-1 abc1234 synthetic production.'):
+        evidence_key = self.keys['REC-1']
+        comments = self.jira.get_comments(evidence_key)
+        comment = next((c for c in comments if quote in c['body']), comments[0])
         return {'status': 'PASS', 'rationale': 'QA confirms all mandatory tests pass for the exact target scope.',
-            'outstanding': 'None.', 'references': [{'issue_key': 'TYN-3', 'comment_id': '10003',
+            'outstanding': 'None.', 'references': [{'issue_key': evidence_key, 'comment_id': comment['id'],
                 'quote': quote, 'why': 'QA result matches release, commit, service and production.'}]}
 
     def test_tool_loop_generates_report_trace_and_usage(self):
-        model = ScriptedModel([('get_record', {'issue_key': 'TYN-2'}),
-            ('get_record', {'issue_key': 'TYN-3'}), ('submit_decision', self.decision())])
+        model = ScriptedModel([('get_record', {'issue_key': self.keys['REQ-01']}),
+            ('get_record', {'issue_key': self.keys['REC-1']}), ('submit_decision', self.decision())])
         result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path)
         self.assertEqual(result['execution_status'], 'COMPLETED')
         self.assertEqual(result['overall_decision'], 'READY')
         self.assertEqual(result['metrics']['model_calls'], 3)
         self.assertEqual(result['metrics']['usage']['promptTokenCount'], 30)
         report = Path(result['report_path']).read_text(encoding='utf-8')
-        self.assertIn('focusedCommentId=10003', report)
+        self.assertIn('focusedCommentId=' + self.decision()['references'][0]['comment_id'], report)
         trace = [json.loads(x) for x in Path(result['trace_path']).read_text().splitlines()]
         self.assertTrue(any(x['kind'] == 'tool' and x['name'] == 'get_record' and x['actor'] == 'model' for x in trace))
         self.assertNotIn('source_records', json.dumps(model.seen))
 
     def test_fabricated_citation_and_omitted_dependency_rejected(self):
         tools = EvidenceTools(self.jira)
-        tools.get_record('TYN-2')
+        tools.get_record(self.keys['REQ-01'])
         with self.assertRaisesRegex(ValueError, 'Inspect linked ticket'):
-            tools.validate_decision(self.decision(), 'TYN-2')
-        tools.get_record('TYN-3')
+            tools.validate_decision(self.decision(), self.keys['REQ-01'])
+        tools.get_record(self.keys['REC-1'])
         with self.assertRaisesRegex(ValueError, 'verbatim'):
-            tools.validate_decision(self.decision('Fabricated result not in any retrieved evidence.'), 'TYN-2')
+            tools.validate_decision(self.decision('Fabricated result not in any retrieved evidence.'), self.keys['REQ-01'])
 
     def test_model_failure_produces_honest_partial_artifacts(self):
         model = ScriptedModel([])
@@ -81,15 +85,15 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(result['metrics']['model_calls'], 0)
 
     def test_scope_guard_prevents_cross_project_and_label_reads(self):
-        self.jira.http.issues['TYN-3']['fields']['labels'] = ['different-dataset']
+        self.jira.http.issues[self.keys['REC-1']]['fields']['labels'] = ['different-dataset']
         with self.assertRaisesRegex(APIError, 'out-of-scope'):
-            self.jira.get_comments('TYN-3')
-        self.jira.http.issues['TYN-2']['fields']['project']['key'] = 'OTHER'
+            self.jira.get_comments(self.keys['REC-1'])
+        self.jira.http.issues[self.keys['REQ-01']]['fields']['project']['key'] = 'OTHER'
         with self.assertRaises(APIError):
-            self.jira.get_issue('TYN-2')
+            self.jira.get_issue(self.keys['REQ-01'])
 
     def test_budget_exhaustion_cannot_approve(self):
-        model = ScriptedModel([('get_record', {'issue_key': 'TYN-2'})])
+        model = ScriptedModel([('get_record', {'issue_key': self.keys['REQ-01']})])
         result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model,
             output_dir=self.path, max_turns=1)
         self.assertEqual(result['overall_decision'], 'NEEDS_REVIEW')
@@ -114,29 +118,30 @@ class AgentTests(unittest.TestCase):
         data['records'].append(nested)
         self.dataset.write_text(json.dumps(data), encoding='utf-8')
         with contextlib.redirect_stdout(io.StringIO()):
-            run(self.dataset, client=self.jira, summary_path=self.path/'import2.json')
+            imported = run(self.dataset, client=self.jira, summary_path=self.path/'import2.json')
+        self.keys = imported['mapping']
         tools = EvidenceTools(self.jira)
-        tools.get_record('TYN-2')
-        tools.get_record('TYN-3')
-        with self.assertRaisesRegex(ValueError, 'TYN-4'):
-            tools.validate_decision(self.decision(), 'TYN-2')
-        tools.get_record('TYN-4')
-        self.assertEqual(tools.validate_decision(self.decision(), 'TYN-2')['status'], 'PASS')
+        tools.get_record(self.keys['REQ-01'])
+        tools.get_record(self.keys['REC-1'])
+        with self.assertRaisesRegex(ValueError, self.keys['REC-2']):
+            tools.validate_decision(self.decision(), self.keys['REQ-01'])
+        tools.get_record(self.keys['REC-2'])
+        self.assertEqual(tools.validate_decision(self.decision(), self.keys['REQ-01'])['status'], 'PASS')
 
     def test_comments_past_first_page_are_retrieved(self):
         for index in range(120):
-            self.jira.http.request('POST', '/issue/TYN-3/comment', json_body={
+            self.jira.http.request('POST', f"/issue/{self.keys['REC-1']}/comment", json_body={
                 'body': to_adf('Noise event ' + str(index))})
-        self.jira.http.request('POST', '/issue/TYN-3/comment', json_body={
+        self.jira.http.request('POST', f"/issue/{self.keys['REC-1']}/comment", json_body={
             'body': to_adf('Final QA evidence after all noise: a mandatory case fails.')})
-        comments = self.jira.get_comments('TYN-3')
+        comments = self.jira.get_comments(self.keys['REC-1'])
         self.assertEqual(len(comments), 122)
         self.assertIn('mandatory case fails', comments[-1]['body'])
 
     def test_broken_link_is_reported(self):
-        self.jira.http.issues['TYN-2']['fields']['issuelinks'] = []
+        self.jira.http.issues[self.keys['REQ-01']]['fields']['issuelinks'] = []
         with self.assertRaisesRegex(APIError, 'Missing native source links'):
-            EvidenceTools(self.jira).get_record('TYN-2')
+            EvidenceTools(self.jira).get_record(self.keys['REQ-01'])
 
     def test_ambiguous_manifest_cannot_approve(self):
         data = fixture()
@@ -149,8 +154,8 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(result['overall_decision'], 'NEEDS_REVIEW')
 
     def test_search_tool_results_use_object_envelopes(self):
-        model = ScriptedModel([('get_record', {'issue_key': 'TYN-2'}),
-            ('get_record', {'issue_key': 'TYN-3'}), ('search_issues', {'query': 'regression'}),
+        model = ScriptedModel([('get_record', {'issue_key': self.keys['REQ-01']}),
+            ('get_record', {'issue_key': self.keys['REC-1']}), ('search_issues', {'query': 'regression'}),
             ('submit_decision', self.decision())])
         result = assess('TYN', self.jira.label, 'TEST-1', client=self.jira, model=model, output_dir=self.path)
         self.assertEqual(result['execution_status'], 'COMPLETED')
