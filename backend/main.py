@@ -39,32 +39,87 @@ class Application:
         return True
 
     def _run(self, operation, project, label, release):
+        print(f"[START] Operation: {operation}", flush=True)
+        print(f"[START] Jira Project: {project}", flush=True)
+        print(f"[START] Release: {release}", flush=True)
+
         try:
             if operation == 'import':
                 from importer.jira_importer import run
+
                 self.report_dir.mkdir(parents=True, exist_ok=True)
-                result = run(ROOT/'inputs/dataset.json', project=project, summary_path=self.report_dir/'import_summary.json')
+
+                result = run(
+                    ROOT / 'inputs/dataset.json',
+                    project=project,
+                    summary_path=self.report_dir / 'import_summary.json'
+                )
+
                 status = 'failed' if result['failures'] else 'completed'
+
             else:
                 from agent.graph import assess
-                result = assess(project, label, release, output_dir=self.report_dir)
+
+                print("[AGENT] Starting Jira release assessment...", flush=True)
+
+                result = assess(
+                    project,
+                    label,
+                    release,
+                    output_dir=self.report_dir
+                )
+
                 status = result['execution_status'].lower()
+
+                print(
+                    f"[AGENT] Execution completed: {status}",
+                    flush=True
+                )
+
+                print(
+                    f"[AGENT] Requirements assessed: {len(result['requirements'])}",
+                    flush=True
+                )
+
+                print(
+                    f"[AGENT] Errors: {len(result['errors'])}",
+                    flush=True
+                )
+
                 with self.lock:
                     self.latest = result
+
             with self.lock:
-                self.state.update({'status': status, 'result': result,
-                    'finished_at': datetime.now(timezone.utc).isoformat()})
+                self.state.update({
+                    'status': status,
+                    'result': result,
+                    'finished_at': datetime.now(timezone.utc).isoformat()
+                })
+
+            print(f"[END] Operation status: {status}", flush=True)
+
         except Exception as exc:
+            import traceback
+
+            traceback.print_exc()
+
             with self.lock:
-                self.state.update({'status': 'failed', 'error': str(exc)})
+                self.state.update({
+                    'status': 'failed',
+                    'error': str(exc)
+                })
+
+            print(f"[ERROR] {exc}", flush=True)
 
 
 class Handler(BaseHTTPRequestHandler):
     server_version = 'ReleaseEvidence/2.0'
 
     def log_message(self, fmt, *args):
-        # No request bodies, configuration values or authentication headers in logs.
-        pass
+        print(
+        f"[HTTP] {self.address_string()} - {fmt % args}",
+        flush=True
+    )
 
     def setup(self):
         super().setup()
