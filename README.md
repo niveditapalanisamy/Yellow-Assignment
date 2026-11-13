@@ -8,6 +8,24 @@ The application uses Python **3.12+**, with **no third-party runtime dependencie
 
 The historical Jira/Gemini run is included (it predates the Groq migration): [release report](submission/report.md), [structured decisions and metrics](submission/report.json), [investigation trace](submission/trace.jsonl), and [validation results](submission/README.md). It completed in **104.813 seconds**, with **8 model calls**, **22 tool calls**, and **60,315 reported tokens**. All 12 decisions matched the independent regression check: **4 PASS, 4 FAIL, 4 INSUFFICIENT_EVIDENCE; overall BLOCKED**. All **42 tests** passed in a clean virtual environment without runtime packages.
 
+## Live deployment
+
+**Render URL:** `https://yellow-release-evidence.onrender.com`
+
+Replace `https://yellow-release-evidence.onrender.com` with the actual URL shown in your Render dashboard after deployment. Once replaced, you can link directly to the hosted dashboard:
+
+[Open the live Jira Release Evidence Agent](https://yellow-release-evidence.onrender.com)
+
+Useful hosted endpoints:
+
+- Dashboard: `https://yellow-release-evidence.onrender.com/`
+- Health check: `https://yellow-release-evidence.onrender.com/api/health`
+- Latest report (Markdown): `https://yellow-release-evidence.onrender.com/api/report/latest`
+- Latest report (JSON): `https://yellow-release-evidence.onrender.com/api/report/json`
+- Latest investigation trace: `https://yellow-release-evidence.onrender.com/api/report/trace`
+
+The service is deployed through the root `render.yaml` Blueprint. See [Render deployment instructions](docs/RENDER.md) for setup, required environment secrets, deployment steps and hosting limitations. Do not commit Jira or Groq credentials to GitHub; configure them as secret environment variables in Render.
+
 ## Setup
 
 Create a dedicated Jira Cloud project (the supplied configuration uses `TYN`). The importing account needs Browse Projects, Create Issues, Edit Issues, Add Comments and Link Issues. The assessment only reads Jira. Enable the `Task` issue type or set `JIRA_ISSUE_TYPE` to an available type. Required custom fields must have defaults.
@@ -76,9 +94,9 @@ Any mandatory FAIL Ã¢â€ â€™ **BLOCKED**. Otherwise any insufficient r
 python app.py
 ```
 
-Open **http://127.0.0.1:8000**. Enter the project, dataset label and release. Validate/import the source records, run an investigation, inspect decisions and download the Markdown report, JSON and trace. Operations run in background threads; a state endpoint reports progress. The server binds to loopback, accepts same-origin requests, and never exposes configured secrets. It is a local development application, not a hosted multi-user service. Both Windows launchers start this same application.
+Open **http://127.0.0.1:8000**. Enter the project, dataset label and release. Validate/import the source records, run an investigation, inspect decisions and download the Markdown report, JSON and trace. Operations run in background threads; a state endpoint reports progress. The server binds to loopback, accepts same-origin requests, and never exposes configured secrets. It is a local development application when run on your machine. For hosted access, deploy the same application using Render as described below. Both Windows launchers start this same application.
 
-For hosted access, [Render deployment instructions](docs/RENDER.md) and `render.yaml` configure the external host/port and public access to reports, Jira imports and live assessments. There is no username/password prompt. Credentials remain server-side. The committed actual report remains available after a fresh deployment; newly generated report files on the free plan are ephemeral. No paid hosting resources are configured.
+For hosted access, [Render deployment instructions](docs/RENDER.md) and `render.yaml` configure the external host/port and public access to reports, Jira imports and live assessments. The hosted dashboard has no username/password prompt, so anyone with the URL can access its public routes and initiate operations. Credentials remain server-side. The committed actual report remains available after a fresh deployment; newly generated report files on the free plan are ephemeral. No paid hosting resources are configured.
 
 | Endpoint | Purpose |
 |---|---|
