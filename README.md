@@ -12,7 +12,6 @@ The historical Jira/Gemini run is included (it predates the Groq migration): [re
 
 **Render URL:** `https://yellow-release-evidence.onrender.com`
 
-Replace `https://yellow-release-evidence.onrender.com` with the actual URL shown in your Render dashboard after deployment. Once replaced, you can link directly to the hosted dashboard:
 
 [Open the live Jira Release Evidence Agent](https://yellow-release-evidence.onrender.com)
 
